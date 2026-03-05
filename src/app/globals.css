@@ -1,5 +1,6 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "tailwindcss-animate";
+@config "../../tailwind.config.ts";
 @source "../components";
 @source "../lib";
 

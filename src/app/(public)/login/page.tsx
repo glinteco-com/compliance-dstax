@@ -1,12 +1,12 @@
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from '@/components/login-form'
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen relative flex items-center justify-center bg-[#292929] overflow-hidden">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#292929]">
       {/* Background patterns simulating the waves */}
-      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+      <div className="pointer-events-none absolute inset-0 z-0 opacity-20">
         <svg
-          className="w-full h-full preserve-3d"
+          className="preserve-3d h-full w-full"
           preserveAspectRatio="none"
           viewBox="0 0 1440 800"
           fill="none"
@@ -53,9 +53,9 @@ export default function LoginPage() {
         <LoginForm />
       </div>
 
-      <div className="absolute bottom-4 left-0 right-0 text-center z-10 pointer-events-none">
+      <div className="pointer-events-none absolute right-0 bottom-4 left-0 z-10 text-center">
         <span className="text-xs text-gray-400">Version</span>
       </div>
     </main>
-  );
+  )
 }
