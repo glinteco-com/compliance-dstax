@@ -1,0 +1,10 @@
+.next
+node_modules
+dist
+build
+.husky
+README.md
+package.json
+package-lock.json
+yarn.lock
+public
