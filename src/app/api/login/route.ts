@@ -1,67 +1,69 @@
-import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
+  const { email, password } = await req.json()
+
   try {
-    const body = await request.json()
-    const { email, password } = body
+    const res = await auth.api.signInEmail({
+      body: { email, password },
+      asResponse: true,
+    })
 
-    // This is a mock API for demonstration purposes.
-    // In a real application, you would verify credentials against a database.
-    if (email === 'admin@example.com' && password === 'password123') {
-      return NextResponse.json({
-        user: {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@example.com',
-          role: 'admin',
-        },
-        token: 'mock-jwt-token-for-admin',
-        message: 'Login successful',
-      })
+    if (!res.ok) {
+      return new Response('Invalid credentials', { status: 401 })
     }
 
-    if (email === 'user@example.com' && password === 'password123') {
-      return NextResponse.json({
-        user: {
-          id: '2',
-          name: 'Regular User',
-          email: 'user@example.com',
-          role: 'user',
-        },
-        token: 'mock-jwt-token-for-user',
-        message: 'Login successful',
-      })
-    }
+    const data = await res.json()
 
-    // Default mock behavior: succeed for any email with 'password123'
-    if (password === 'password123') {
-      return NextResponse.json({
-        user: {
-          id: '3',
-          name: email.split('@')[0],
-          email: email,
-          role: 'user',
-        },
-        token: `mock-token-${Date.now()}`,
-        message: 'Login successful',
-      })
-    }
-
-    return NextResponse.json(
-      { message: 'Invalid credentials' },
-      { status: 401 }
+    // Extract session token from Set-Cookie header for refreshToken
+    const setCookie = res.headers.get('set-cookie')
+    const sessionTokenMatch = setCookie?.match(
+      /better-auth\.session_token=([^;]+)/
     )
+    const sessionToken = sessionTokenMatch ? sessionTokenMatch[1] : null
+
+    // Add refreshToken to the response data as requested
+    const responseData = {
+      ...data,
+      refreshToken: sessionToken || data.token,
+    }
+
+    // Create response with the updated data
+    const response = Response.json(responseData)
+
+    // Forward the original Better Auth cookies
+    if (setCookie) {
+      response.headers.set('set-cookie', setCookie)
+    }
+
+    // Proactively set the specific cookies that proxy.ts expects
+    const PREFIX = process.env.NEXT_PUBLIC_PREFIX || ''
+
+    // Set 'token' cookie if present in data
+    if (data.token) {
+      response.headers.append(
+        'set-cookie',
+        `${PREFIX}token=${data.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`
+      )
+    }
+
+    // Set 'refreshToken' cookie (using the session token)
+    if (sessionToken) {
+      response.headers.append(
+        'set-cookie',
+        `${PREFIX}refreshToken=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`
+      )
+    }
+
+    // Also forward JWT headers if present (for the jwt plugin)
+    const authJwt = res.headers.get('set-auth-jwt')
+    if (authJwt) {
+      response.headers.set('set-auth-jwt', authJwt)
+    }
+
+    return response
   } catch (error) {
     console.error('Login error:', error)
-    return NextResponse.json(
-      { message: 'Invalid request body' },
-      { status: 400 }
-    )
+    return new Response('Internal Server Error', { status: 500 })
   }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    message: 'Login endpoint active. Use POST to login.',
-  })
 }

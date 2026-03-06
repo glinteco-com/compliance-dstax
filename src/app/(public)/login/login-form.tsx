@@ -2,11 +2,14 @@
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Eye, EyeOff, Mail } from 'lucide-react'
+import { PasswordInput } from '@/components/ui/password'
+import FormController from '@/components/ui/FormController'
+import { Mail } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useRouter } from 'next/navigation'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -16,19 +19,21 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 export function LoginForm() {
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormValues>({
+  const { control, handleSubmit } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   })
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true)
+    setError(null)
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
@@ -37,12 +42,15 @@ export function LoginForm() {
       })
 
       if (response.ok) {
-        // Redirect or show success
+        router.push('/')
+        router.refresh()
       } else {
-        // Handle login error
+        const errorText = await response.text()
+        setError(errorText || 'Invalid credentials')
       }
     } catch (error) {
       console.error('Login failed:', error)
+      setError('An unexpected error occurred')
     } finally {
       setIsLoading(false)
     }
@@ -75,63 +83,45 @@ export function LoginForm() {
         <span className="text-brand-gray-500 mt-1 text-[10px]">Consulting</span>
       </div>
 
-      <form className="w-full space-y-4" onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">
-            Email address
-          </label>
-          <div className="relative">
-            <Input
-              {...register('email')}
-              type="email"
-              placeholder="name@mail.com"
-              className={`rounded-none border-gray-300 pr-10 focus-visible:ring-1 focus-visible:ring-gray-400 ${
-                errors.email ? 'border-red-500' : ''
-              }`}
-            />
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <Mail className="h-4 w-4 text-gray-400" />
-            </div>
-          </div>
-          {errors.email && (
-            <p className="text-xs text-red-500">{errors.email.message}</p>
-          )}
+      {error && (
+        <div className="mb-4 w-full border border-red-200 bg-red-50 p-3 text-center text-sm text-red-600">
+          {error}
         </div>
+      )}
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">Password</label>
-          <div className="relative">
-            <Input
-              {...register('password')}
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              className={`rounded-none border-gray-300 pr-10 focus-visible:ring-1 focus-visible:ring-gray-400 ${
-                errors.password ? 'border-red-500' : ''
-              }`}
-            />
-            <button
-              type="button"
-              className="absolute inset-y-0 right-0 flex items-center pr-3"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? (
-                <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-              ) : (
-                <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-              )}
-            </button>
-          </div>
-          {errors.password && (
-            <p className="text-xs text-red-500">{errors.password.message}</p>
-          )}
-        </div>
+      <form className="w-full space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <FormController
+          control={control}
+          name="email"
+          Field={Input}
+          fieldProps={{
+            label: 'Email address',
+            type: 'email',
+            placeholder: 'name@mail.com',
+            className:
+              'rounded-none border-gray-300 focus-visible:ring-1 focus-visible:ring-gray-400',
+            prefixIcon: <Mail />,
+          }}
+        />
+
+        <FormController
+          control={control}
+          name="password"
+          Field={PasswordInput}
+          fieldProps={{
+            label: 'Password',
+            placeholder: 'Password',
+            className:
+              'rounded-none border-gray-300 focus-visible:ring-1 focus-visible:ring-gray-400',
+          }}
+        />
 
         <Button
           type="submit"
-          disabled={isLoading}
+          isLoading={isLoading}
           className="bg-brand-orange-500 hover:bg-brand-orange-600 mt-6 h-10 w-full rounded-none text-white"
         >
-          {isLoading ? 'Logging in...' : 'Login'}
+          Login
         </Button>
 
         <div className="mt-4 text-center">

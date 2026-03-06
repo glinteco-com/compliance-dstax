@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LoginForm } from '@/components/login-form'
+import { LoginForm } from '@/app/(public)/login/login-form'
 import {
   Mail,
   Settings,
