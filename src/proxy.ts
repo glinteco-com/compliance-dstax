@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 const PREFIX = process.env.NEXT_PUBLIC_PREFIX || ''
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const redirect = checkAccessibility(req)
 
   if (redirect) {
@@ -31,7 +31,9 @@ const checkAccessibility = (request: NextRequest) => {
   const isPublic = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   )
-  if (!refreshToken && !token && !isPublic) {
+  const isApi = pathname.startsWith('/api/')
+
+  if (!refreshToken && !token && !isPublic && !isApi) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
