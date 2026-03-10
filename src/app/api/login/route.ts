@@ -5,6 +5,7 @@ export async function POST(req: Request) {
 
   try {
     const res = await auth.api.signInEmail({
+      headers: req.headers,
       body: { email, password },
       asResponse: true,
     })

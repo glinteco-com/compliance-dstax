@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 
 const loginSchema = z.object({
@@ -19,9 +20,9 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { signInMutation } = useAuth()
 
   const { control, handleSubmit } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -31,29 +32,24 @@ export function LoginForm() {
     },
   })
 
-  const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true)
+  const onSubmit = (data: LoginFormValues) => {
     setError(null)
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-
-      if (response.ok) {
+    signInMutation.mutate(data, {
+      onSuccess: () => {
         router.push('/')
         router.refresh()
-      } else {
-        const errorText = await response.text()
-        setError(errorText || 'Invalid credentials')
-      }
-    } catch (error) {
-      console.error('Login failed:', error)
-      setError('An unexpected error occurred')
-    } finally {
-      setIsLoading(false)
-    }
+      },
+      onError: (err: any) => {
+        console.error('Login failed:', err)
+        const errorMessage =
+          err.response?.data || err.message || 'An unexpected error occurred'
+        setError(
+          typeof errorMessage === 'string'
+            ? errorMessage
+            : 'Invalid credentials'
+        )
+      },
+    })
   }
 
   return (
@@ -118,7 +114,7 @@ export function LoginForm() {
 
         <Button
           type="submit"
-          isLoading={isLoading}
+          isLoading={signInMutation.isPending}
           className="bg-brand-orange-500 hover:bg-brand-orange-600 mt-6 h-10 w-full rounded-none text-white"
         >
           Login
