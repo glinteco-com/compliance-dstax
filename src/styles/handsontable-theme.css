@@ -1,0 +1,143 @@
+@layer components {
+  /* Base table styling */
+  .handsontable,
+  .handsontable .htCore {
+    font-family:
+      var(--font-sans), ui-sans-serif, system-ui, sans-serif !important;
+    font-size: 0.875rem !important; /* text-sm */
+    color: var(--color-foreground) !important;
+  }
+
+  .dark .handsontable,
+  .dark .handsontable .htCore {
+    background-color: var(--color-background) !important;
+  }
+
+  /* Header cells */
+  .handsontable th,
+  .handsontable .ht_clone_top th,
+  .handsontable .ht_clone_left th,
+  .handsontable .ht_clone_top_left_corner th,
+  .handsontable .ht_clone_bottom_left_corner th {
+    background-color: #2d3a56 !important; /* brand-navy-500 */
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    border-color: #374c6e !important; /* brand-navy-600 */
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .dark .handsontable th,
+  .dark .handsontable .ht_clone_top th,
+  .dark .handsontable .ht_clone_left th,
+  .dark .handsontable .ht_clone_top_left_corner th,
+  .dark .handsontable .ht_clone_bottom_left_corner th {
+    background-color: #28344b !important; /* brand-navy-800 */
+    border-color: #2d3d5a !important; /* brand-navy-700 */
+  }
+
+  /* Body cells */
+  .handsontable td {
+    border-color: var(--color-border) !important;
+    vertical-align: middle !important;
+  }
+
+  .dark .handsontable td {
+    background-color: var(--color-background) !important;
+    color: var(--color-foreground) !important;
+  }
+
+  /* Row hover */
+  .handsontable tbody tr:hover td {
+    background-color: #f5f6f8 !important; /* brand-navy-50 */
+  }
+
+  .dark .handsontable tbody tr:hover td {
+    background-color: #252d3f !important; /* brand-navy-900 */
+    color: var(--color-foreground) !important;
+  }
+
+  /* Read-only cells */
+  .handsontable td.htDimmed {
+    background-color: #f7f8f9 !important; /* brand-gray-50 */
+    color: #6b7b9b !important; /* brand-gray-500 */
+  }
+
+  .dark .handsontable td.htDimmed {
+    background-color: #232834 !important; /* brand-gray-950 */
+    color: #8f98af !important; /* brand-gray-400 */
+  }
+
+  /* Selected cell borders and area */
+  .handsontable .wtBorder.current,
+  .handsontable .wtBorder.area,
+  .handsontable .wtBorder.corner {
+    background-color: #f96c00 !important; /* brand-orange-500 */
+  }
+
+  /* Editor Input Focus */
+  .handsontableInput {
+    box-shadow: 0 0 0 2px #f96c00 inset !important; /* brand-orange-500 */
+  }
+
+  .htCheckboxRendererInput {
+    accent-color: #f96c00 !important; /* brand-orange-500 */
+  }
+
+  /* Active area transparent background */
+  .handsontable .area {
+    background-color: color-mix(in srgb, #f96c00 10%, transparent) !important;
+  }
+
+  .dark .handsontable .area {
+    background-color: color-mix(in srgb, #f96c00 20%, transparent) !important;
+  }
+
+  /* Table Container Border */
+  .ht_master .wtHolder {
+    border-radius: var(--radius-md, 0.375rem) !important;
+    border: 1px solid var(--color-border) !important;
+  }
+
+  /* Context Menu and Dropdown Fixes */
+  .htContextMenu,
+  .htDropdownMenu {
+    background-color: var(--color-background) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  }
+
+  .htContextMenu table.htCore,
+  .htDropdownMenu table.htCore {
+    border: none !important;
+  }
+
+  .htContextMenu table tbody tr td,
+  .htDropdownMenu table tbody tr td {
+    background-color: var(--color-background) !important;
+    color: var(--color-foreground) !important;
+    border: none !important;
+    padding: 6px 16px !important;
+    cursor: pointer !important;
+  }
+
+  .htContextMenu table tbody tr td:hover,
+  .htDropdownMenu table tbody tr td:hover {
+    background-color: #f5f6f8 !important; /* brand-navy-50 */
+  }
+
+  .dark .htContextMenu table tbody tr td:hover,
+  .dark .htDropdownMenu table tbody tr td:hover {
+    background-color: #252d3f !important; /* brand-navy-900 */
+  }
+
+  .htContextMenu table tbody tr td.htSeparator,
+  .htDropdownMenu table tbody tr td.htSeparator {
+    border-top: 1px solid var(--color-border) !important;
+    height: 1px !important;
+    padding: 0 !important;
+  }
+}
