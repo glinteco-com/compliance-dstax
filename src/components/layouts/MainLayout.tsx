@@ -1,4 +1,7 @@
+'use client'
+
 import * as React from 'react'
+import { usePathname } from 'next/navigation'
 import {
   Building2,
   Users,
@@ -97,29 +100,38 @@ const items: NavigationItem[] = [
 ]
 
 function AppSidebar() {
+  const pathname = usePathname()
+
   return (
-    <Sidebar className="bg-black">
+    <Sidebar className="!border-0 bg-black">
       <SidebarContent className="bg-black">
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="flex h-auto items-start justify-center p-6 text-center text-white">
             <h2>DSTax</h2>
-            <p>Compliance</p>
+            <p className="mt-6 text-xs">Compliance</p>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a
-                      href={item.url}
-                      className="rounded-none border-l-4 border-transparent px-8 py-2 text-[#666] hover:border-orange-500 hover:bg-transparent hover:text-white"
-                    >
-                      {item.icon}
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const isActive = pathname === item.url
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <a
+                        href={item.url}
+                        className={`rounded-none border-l-4 px-8 py-2 hover:bg-transparent hover:text-white ${
+                          isActive
+                            ? 'border-orange-500 !bg-white text-white'
+                            : 'border-transparent text-[#666] hover:border-orange-500'
+                        }`}
+                      >
+                        {item.icon}
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
