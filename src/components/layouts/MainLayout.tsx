@@ -16,6 +16,17 @@ import {
   GitMerge,
   Ticket,
   MessageSquare,
+  ChevronRight,
+  Database,
+  Globe,
+  Layers,
+  Clock,
+  Calendar,
+  FolderOpen,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Archive,
+  FileText,
 } from 'lucide-react'
 
 import {
@@ -27,6 +38,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
@@ -36,40 +48,73 @@ interface NavigationItem {
   url?: string
   icon?: React.ReactNode
   scope?: string | string[] | null
-  isAccordion?: boolean
+  items?: NavigationItem[]
 }
 
 const items: NavigationItem[] = [
   {
-    title: 'Legal Entities',
-    url: '/legal-entities',
-    icon: <Building2 className="h-4 w-4" />,
-  },
-  { title: 'Users', url: '/users', icon: <Users className="h-4 w-4" /> },
-  {
-    title: 'DSTax Preparer',
-    url: '/dstax-preparer',
-    icon: <Calculator className="h-4 w-4" />,
-  },
-  {
-    title: 'Filing Frequencies',
-    url: '/filing-frequencies',
-    icon: <CalendarDays className="h-4 w-4" />,
-  },
-  {
-    title: 'Filing Type',
-    url: '/filing-type',
-    icon: <FileBadge className="h-4 w-4" />,
+    title: 'Clients',
+    icon: <Users className="h-4 w-4" />,
+    items: [
+      {
+        title: 'Legal Entities',
+        url: '/legal-entities',
+        icon: <Building2 className="h-4 w-4" />,
+      },
+      { title: 'Users', url: '/users', icon: <Users className="h-4 w-4" /> },
+      {
+        title: 'DSTax Preparer',
+        url: '/dstax-preparer',
+        icon: <Calculator className="h-4 w-4" />,
+      },
+    ],
   },
   {
-    title: 'Tax Type',
-    url: '/tax-type',
-    icon: <Landmark className="h-4 w-4" />,
-  },
-  {
-    title: 'Prepayment Method',
-    url: '/prepayment-method',
-    icon: <CreditCard className="h-4 w-4" />,
+    title: 'Master Data',
+    icon: <Database className="h-4 w-4" />,
+    items: [
+      {
+        title: 'Jurisdictions',
+        icon: <Globe className="h-4 w-4" />,
+        items: [
+          {
+            title: 'Level',
+            url: '/master-data/jurisdictions/level',
+            icon: <Layers className="h-4 w-4" />,
+          },
+          {
+            title: 'Due Date',
+            url: '/master-data/jurisdictions/due-date',
+            icon: <Calendar className="h-4 w-4" />,
+          },
+          {
+            title: 'Due Date Time',
+            url: '/master-data/jurisdictions/due-date-time',
+            icon: <Clock className="h-4 w-4" />,
+          },
+        ],
+      },
+      {
+        title: 'Filing Frequencies',
+        url: '/filing-frequencies',
+        icon: <CalendarDays className="h-4 w-4" />,
+      },
+      {
+        title: 'Filing Type',
+        url: '/filing-type',
+        icon: <FileBadge className="h-4 w-4" />,
+      },
+      {
+        title: 'Tax Type',
+        url: '/tax-type',
+        icon: <Landmark className="h-4 w-4" />,
+      },
+      {
+        title: 'Prepayment Method',
+        url: '/prepayment-method',
+        icon: <CreditCard className="h-4 w-4" />,
+      },
+    ],
   },
   { title: 'TVRs', url: '/tvrs', icon: <ClipboardList className="h-4 w-4" /> },
   {
@@ -88,6 +133,32 @@ const items: NavigationItem[] = [
     icon: <GitMerge className="h-4 w-4" />,
   },
   {
+    title: 'Client Folders',
+    icon: <FolderOpen className="h-4 w-4" />,
+    items: [
+      {
+        title: 'Inbound Data',
+        url: '/client-folders/inbound',
+        icon: <ArrowDownLeft className="h-4 w-4" />,
+      },
+      {
+        title: 'Outbound Data',
+        url: '/client-folders/outbound',
+        icon: <ArrowUpRight className="h-4 w-4" />,
+      },
+      {
+        title: 'Archived Returns',
+        url: '/client-folders/archived',
+        icon: <Archive className="h-4 w-4" />,
+      },
+      {
+        title: 'Client Documents',
+        url: '/client-folders/documents',
+        icon: <FileText className="h-4 w-4" />,
+      },
+    ],
+  },
+  {
     title: 'Support Tickets',
     url: '/support-tickets',
     icon: <Ticket className="h-4 w-4" />,
@@ -99,6 +170,88 @@ const items: NavigationItem[] = [
   },
 ]
 
+function NavMenuItem({
+  item,
+  pathname,
+  depth = 0,
+}: {
+  item: NavigationItem
+  pathname: string
+  depth?: number
+}) {
+  const hasItems = item.items && item.items.length > 0
+  const [isOpen, setIsOpen] = React.useState(false)
+
+  // Auto-expand if a child is active
+  React.useEffect(() => {
+    if (hasItems) {
+      const isChildActive = (items: NavigationItem[]): boolean => {
+        return items.some(
+          (child) =>
+            child.url === pathname ||
+            (child.items && isChildActive(child.items))
+        )
+      }
+      if (isChildActive(item.items!)) {
+        setIsOpen(true)
+      }
+    }
+  }, [pathname, hasItems, item.items])
+
+  const isActive = item.url === pathname
+
+  if (hasItems) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={() => setIsOpen(!isOpen)}
+          className={`rounded-none border-l-4 px-8 py-2 hover:bg-transparent hover:text-white ${
+            isOpen
+              ? 'border-orange-500 text-white'
+              : 'border-transparent text-[#666] hover:border-orange-500'
+          }`}
+        >
+          {item.icon}
+          <span>{item.title}</span>
+          <ChevronRight
+            className={`ml-auto h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+          />
+        </SidebarMenuButton>
+        {isOpen && (
+          <SidebarMenuSub className="ml-4 border-l border-white/10">
+            {item.items?.map((subItem) => (
+              <NavMenuItem
+                key={subItem.title}
+                item={subItem}
+                pathname={pathname}
+                depth={depth + 1}
+              />
+            ))}
+          </SidebarMenuSub>
+        )}
+      </SidebarMenuItem>
+    )
+  }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive}>
+        <a
+          href={item.url}
+          className={`rounded-none border-l-4 px-8 py-2 hover:bg-transparent hover:text-white ${
+            isActive
+              ? 'border-orange-500 text-white'
+              : 'border-transparent text-[#666] hover:border-orange-500'
+          }`}
+        >
+          {item.icon}
+          <span>{item.title}</span>
+        </a>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
 function AppSidebar() {
   const pathname = usePathname()
 
@@ -107,31 +260,14 @@ function AppSidebar() {
       <SidebarContent className="bg-black">
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="flex h-auto items-start justify-center p-6 text-center text-white">
-            <h2>DSTax</h2>
+            <h2 className="text-xl font-bold">DSTax</h2>
             <p className="mt-6 text-xs">Compliance</p>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => {
-                const isActive = pathname === item.url
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <a
-                        href={item.url}
-                        className={`rounded-none border-l-4 px-8 py-2 hover:bg-transparent hover:text-white ${
-                          isActive
-                            ? 'border-orange-500 !bg-white text-white'
-                            : 'border-transparent text-[#666] hover:border-orange-500'
-                        }`}
-                      >
-                        {item.icon}
-                        <span>{item.title}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
+              {items.map((item) => (
+                <NavMenuItem key={item.title} item={item} pathname={pathname} />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
