@@ -15,6 +15,8 @@ import {
   DrawerClose,
 } from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { DatePickerInput } from '@/components/datepicker/DatePicker'
 import FormController from '@/components/form/FormController'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -280,10 +282,9 @@ export default function SupportTicketsPage() {
             <FormController
               name="createdDate"
               control={form.control}
-              Field={Input}
+              Field={DatePickerInput}
               fieldProps={{
                 label: 'Create date',
-                type: 'date',
                 disabled: true, // Usually auto-generated
               }}
             />
@@ -302,22 +303,21 @@ export default function SupportTicketsPage() {
             <FormController
               name="description"
               control={form.control}
-              Field={Input} // Using Input as requested, but acting as Description
+              Field={Textarea}
               fieldProps={{
                 label: 'Description issue',
                 placeholder: 'Detailed description',
-                className: 'h-24 align-top', // Mimicking textarea
                 disabled: !!selectedTicket,
+                rows: 5,
               }}
             />
 
             <FormController
               name="dueDate"
               control={form.control}
-              Field={Input}
+              Field={DatePickerInput}
               fieldProps={{
                 label: 'Due on',
-                type: 'date',
                 disabled: !!selectedTicket,
               }}
             />
