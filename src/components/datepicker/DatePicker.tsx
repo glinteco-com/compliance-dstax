@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/popover'
 import { CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useHasMounted } from '@/hooks/use-has-mounted'
 
 function formatDate(date: Date | undefined) {
   if (!date) {
@@ -60,6 +61,8 @@ export function DatePickerInput({
   const generatedId = React.useId()
   const inputId = id || generatedId
 
+  const hasMounted = useHasMounted()
+
   // Internal state for the displayed text value
   const [inputValue, setInputValue] = React.useState('')
 
@@ -79,8 +82,15 @@ export function DatePickerInput({
 
   const selectedDate = value ? new Date(value) : undefined
   const [month, setMonth] = React.useState<Date | undefined>(
-    selectedDate && isValidDate(selectedDate) ? selectedDate : new Date()
+    selectedDate && isValidDate(selectedDate) ? selectedDate : undefined
   )
+
+  // Initialize month on client mount if no value is present
+  React.useEffect(() => {
+    if (hasMounted && !month && !selectedDate) {
+      setMonth(new Date())
+    }
+  }, [hasMounted, month, selectedDate])
 
   const handleSelect = (date: Date | undefined) => {
     if (date) {

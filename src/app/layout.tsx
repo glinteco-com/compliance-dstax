@@ -1,7 +1,8 @@
-import QueryProvider from '@/components/providers/query-provider'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import QueryClient from '@/components/provider/QueryClient'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -25,11 +26,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <QueryProvider>{children}</QueryProvider>
-      </body>
+      <QueryClient>
+        <TooltipProvider>
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          >
+            <div vaul-drawer-wrapper="">{children}</div>
+          </body>
+        </TooltipProvider>
+      </QueryClient>
     </html>
   )
 }
