@@ -1,10 +1,11 @@
-import { Cookies } from '@/lib/cookies'
+import { getAuthToken } from '@/lib/cookies'
 import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
   AxiosResponse,
   AxiosError,
 } from 'axios'
+import { getCookie } from 'cookies-next'
 
 /**
  * Axios instance configured for API calls.
@@ -24,7 +25,7 @@ apiClient.interceptors.request.use(
     // Get the session token from cookies
     // better-auth uses 'better-auth.session_token' by default
     const token =
-      Cookies.get('better-auth.session_token') || Cookies.get('token')
+      getAuthToken() || (getCookie('better-auth.session_token') as string)
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import apiClient from '@/lib/api-client'
+import apiClient from '@/api/api-client'
 import { Cookies } from '@/lib/cookies'
+
+import { authClient } from '@/lib/auth/auth-client'
 
 /**
  * Hook for authentication-related operations using React Query and Axios.
@@ -32,13 +34,17 @@ export const useAuth = () => {
    */
   const signOutMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await apiClient.post('/auth/sign-out')
-      return data
-    },
-    onSuccess: () => {
+      // 1. Clear better-auth session
+      await authClient.signOut()
+
+      // 2. Clear custom HttpOnly cookies via API
+      await apiClient.post('/logout')
+
+      // 3. Clear any remaining client-side cookies
       Cookies.remove('token')
       Cookies.remove('refreshToken')
-      Cookies.remove('better-auth.session_token')
+    },
+    onSuccess: () => {
       queryClient.clear()
       queryClient.setQueryData(['session'], null)
     },
