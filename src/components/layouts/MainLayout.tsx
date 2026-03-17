@@ -27,7 +27,20 @@ import {
   ArrowUpRight,
   Archive,
   FileText,
+  User,
+  LogOut,
 } from 'lucide-react'
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useRouter } from 'next/navigation'
+import useAuth from '@/hooks/useAuth'
 
 import {
   Sidebar,
@@ -42,6 +55,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { Button } from '../ui/button'
 
 interface NavigationItem {
   title: string
@@ -281,12 +295,54 @@ export default function MainLayout({
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const { user, signOutMutation } = useAuth()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await signOutMutation.mutateAsync()
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
+
+  const userName = mounted && user?.name ? user.name : 'John Doe'
+
   return (
     <SidebarProvider>
       <AppSidebar />
       <main className="bg-background flex min-h-svh flex-1 flex-col">
-        <div className="flex h-14 items-center gap-4 border-b px-4 lg:h-[60px]">
+        <div className="flex h-14 items-center justify-between gap-4 border-b px-4 lg:h-[60px]">
           <SidebarTrigger />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex cursor-pointer items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                <span>{userName}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push('/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex-1 p-4 lg:p-6">{children}</div>
       </main>
