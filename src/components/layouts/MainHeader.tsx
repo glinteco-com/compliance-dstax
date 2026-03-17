@@ -31,7 +31,7 @@ export default function MainHeader() {
   if (!hasMounted) return null
 
   return (
-    <div className="flex h-14 items-center justify-between gap-4 border-b px-4 lg:h-[60px]">
+    <div className="flex h-14 items-center justify-between gap-4 border-b px-6 py-4 lg:h-[60px]">
       <SidebarTrigger />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
