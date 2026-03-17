@@ -21,8 +21,8 @@ import {
   Database,
   Globe,
   Layers,
-  Clock,
-  Calendar,
+  // Clock,
+  // Calendar,
   FolderOpen,
   ArrowDownLeft,
   ArrowUpRight,
@@ -86,36 +86,36 @@ const items: NavigationItem[] = [
             url: '/master-data/jurisdictions/level',
             icon: <Layers className="h-4 w-4" />,
           },
-          {
-            title: 'Due Date',
-            url: '/master-data/jurisdictions/due-date',
-            icon: <Calendar className="h-4 w-4" />,
-          },
-          {
-            title: 'Due Date Time',
-            url: '/master-data/jurisdictions/due-date-time',
-            icon: <Clock className="h-4 w-4" />,
-          },
+          // {
+          //   title: 'Due Date',
+          //   url: '/master-data/jurisdictions/due-date',
+          //   icon: <Calendar className="h-4 w-4" />,
+          // },
+          // {
+          //   title: 'Due Date Time',
+          //   url: '/master-data/jurisdictions/due-date-time',
+          //   icon: <Clock className="h-4 w-4" />,
+          // },
         ],
       },
       {
         title: 'Filing Frequencies',
-        url: '/filing-frequencies',
+        url: '/master-data/filing-frequencies',
         icon: <CalendarDays className="h-4 w-4" />,
       },
       {
         title: 'Filing Type',
-        url: '/filing-type',
+        url: '/master-data/filing-type',
         icon: <FileBadge className="h-4 w-4" />,
       },
       {
         title: 'Tax Type',
-        url: '/tax-type',
+        url: '/master-data/tax-type',
         icon: <Landmark className="h-4 w-4" />,
       },
       {
         title: 'Prepayment Method',
-        url: '/prepayment-method',
+        url: '/master-data/prepayment-method',
         icon: <CreditCard className="h-4 w-4" />,
       },
     ],
@@ -260,7 +260,7 @@ function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar className="!border-0 bg-black">
+    <Sidebar className="border-0! bg-black">
       <SidebarContent className="bg-black">
         <SidebarGroup className="p-0">
           <SidebarGroupLabel className="flex h-auto items-start justify-center p-6 text-center text-white">
