@@ -10,10 +10,18 @@ import {
   DayPicker,
   getDefaultClassNames,
   type DayButton,
+  type DropdownProps,
 } from 'react-day-picker'
 
 import { cn } from '@/lib/utils'
 import { Button, buttonVariants } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 function Calendar({
   className,
@@ -78,14 +86,12 @@ function Calendar({
           defaultClassNames.dropdown_root
         ),
         dropdown: cn(
-          'absolute inset-0 bg-popover opacity-0',
+          'bg-transparent text-sm font-medium outline-none',
           defaultClassNames.dropdown
         ),
         caption_label: cn(
           'font-medium select-none',
-          captionLayout === 'label'
-            ? 'text-sm'
-            : 'flex h-8 items-center gap-1 rounded-md pr-1 pl-2 text-sm [&>svg]:size-3.5 [&>svg]:text-muted-foreground',
+          captionLayout === 'label' ? 'text-sm' : 'hidden',
           defaultClassNames.caption_label
         ),
         table: 'w-full border-collapse',
@@ -111,11 +117,14 @@ function Calendar({
           defaultClassNames.day
         ),
         range_start: cn(
-          'rounded-l-md bg-accent',
+          'rounded-l-md bg-brand-orange-500 text-white',
           defaultClassNames.range_start
         ),
         range_middle: cn('rounded-none', defaultClassNames.range_middle),
-        range_end: cn('rounded-r-md bg-accent', defaultClassNames.range_end),
+        range_end: cn(
+          'rounded-r-md bg-brand-orange-500 text-white',
+          defaultClassNames.range_end
+        ),
         today: cn(
           'rounded-md bg-accent text-accent-foreground data-[selected=true]:rounded-none',
           defaultClassNames.today
@@ -162,6 +171,7 @@ function Calendar({
             <ChevronDownIcon className={cn('size-4', className)} {...props} />
           )
         },
+        Dropdown: CalendarDropdown,
         DayButton: CalendarDayButton,
         WeekNumber: ({ children, ...props }) => {
           return (
@@ -176,6 +186,39 @@ function Calendar({
       }}
       {...props}
     />
+  )
+}
+
+function CalendarDropdown({
+  options,
+  value,
+  onChange,
+  'aria-label': ariaLabel,
+}: DropdownProps) {
+  const handleChange = (newValue: string) => {
+    const event = {
+      target: { value: newValue },
+    } as React.ChangeEvent<HTMLSelectElement>
+    onChange?.(event)
+  }
+
+  return (
+    <Select value={value?.toString()} onValueChange={handleChange}>
+      <SelectTrigger className="h-8 w-fit gap-1 border-none bg-transparent px-2 py-1 text-sm font-medium shadow-none hover:bg-zinc-100 focus:ring-0 dark:hover:bg-zinc-800">
+        <SelectValue placeholder={ariaLabel} />
+      </SelectTrigger>
+      <SelectContent position="popper" className="max-h-[200px]">
+        {options?.map((option) => (
+          <SelectItem
+            key={option.value}
+            value={option.value.toString()}
+            disabled={option.disabled}
+          >
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -208,7 +251,7 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        'group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70',
+        'group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 data-[range-end=true]:bg-brand-orange-500 data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-brand-orange-500 data-[selected-single=true]:bg-brand-orange-500 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-end=true]:text-white data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md data-[range-start=true]:text-white data-[selected-single=true]:text-white [&>span]:text-xs [&>span]:opacity-70',
         defaultClassNames.day,
         className
       )}
