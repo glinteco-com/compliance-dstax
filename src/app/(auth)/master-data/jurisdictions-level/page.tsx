@@ -7,11 +7,10 @@ import * as z from 'zod'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import FormController from '@/components/form/FormController'
+import { Plus } from 'lucide-react'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
-import { useColumnDstaxPreparer } from './hooks/useColumnDstaxPreparer'
-import { Preparer } from '@/types/dstax-preparer'
+import FormController from '@/components/form/FormController'
 import {
   Drawer,
   DrawerClose,
@@ -21,42 +20,44 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { Plus } from 'lucide-react'
+import { useColumnJurisdictionLevel } from './hooks/useColumnJurisdictionLevel'
+import { JurisdictionLevel } from '@/types/jurisdiction-level'
 
-const mockData: Preparer[] = [
+const mockData: JurisdictionLevel[] = [
   {
     id: '1',
-    name: 'Alice Johnson',
-    email: 'alice.j@dstax.com',
-    assignedClients: 5,
+    name: 'Country',
+    description: 'Top-level national jurisdiction',
   },
   {
     id: '2',
-    name: 'Bob Richards',
-    email: 'bob.r@dstax.com',
-    assignedClients: 3,
+    name: 'State',
+    description: 'State or provincial jurisdiction',
   },
   {
     id: '3',
-    name: 'Charlie Davis',
-    email: 'charlie.d@dstax.com',
-    assignedClients: 8,
+    name: 'Local',
+    description: 'City, county, or local municipality',
   },
 ]
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  assignedClients: z.coerce.number().min(0, 'Must be at least 0').optional(),
+  name: z.string().min(1, 'Level name is required'),
+  description: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
-export default function PreparersPage() {
-  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
-  const [targetPreparerId, setTargetPreparerId] = React.useState<string | null>(
-    null
-  )
+export default function JurisdictionLevelPage() {
+  const [isDeleting, setIsDeleting] = React.useState(false)
+  const [targetId, setTargetId] = React.useState<string | null>(null)
+
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] =
+    React.useState<JurisdictionLevel | null>(null)
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -64,68 +65,6 @@ export default function PreparersPage() {
     onCloseDialog: onCloseDeleteDialog,
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
-
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
-  const [drawerMode, setDrawerMode] = React.useState<
-    'create' | 'edit' | 'view'
-  >('create')
-  const [selectedItem, setSelectedItem] = React.useState<Preparer | null>(null)
-
-  const { control, reset, handleSubmit } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      assignedClients: 0,
-    },
-  })
-
-  const openDrawer = (
-    mode: 'create' | 'edit' | 'view',
-    item: Preparer | null = null
-  ) => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
-    }
-    setDrawerMode(mode)
-    setSelectedItem(item)
-
-    if (mode === 'edit' && item) {
-      reset({
-        name: item.name,
-        email: item.email,
-        assignedClients: item.assignedClients,
-      })
-    } else if (mode === 'create') {
-      reset({
-        name: '',
-        email: '',
-        assignedClients: 0,
-      })
-    }
-
-    setIsDrawerOpen(true)
-  }
-
-  const onSubmit = (data: FormValues) => {
-    console.log('Form submitted:', data)
-    setIsDrawerOpen(false)
-  }
-
-  const handleDelete = (id: string) => {
-    setTargetPreparerId(id)
-    onOpenDeleteDialog()
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!targetPreparerId) return
-    setIsDeleting(targetPreparerId)
-    // Mocking an async operation
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    alert(`Preparer ${targetPreparerId} has been deleted.`)
-    setIsDeleting(null)
-    onCloseDeleteDialog()
-  }
 
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
@@ -141,7 +80,53 @@ export default function PreparersPage() {
     setCurrentPage(1)
   }
 
-  const { columns } = useColumnDstaxPreparer({
+  const { control, reset, handleSubmit } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+    },
+  })
+
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: JurisdictionLevel | null = null
+  ) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({ name: item.name, description: item.description ?? '' })
+    } else if (mode === 'create') {
+      reset({ name: '', description: '' })
+    }
+
+    setIsDrawerOpen(true)
+  }
+
+  const onSubmit = (data: FormValues) => {
+    console.log('Form submitted:', data)
+    setIsDrawerOpen(false)
+  }
+
+  const handleDelete = (id: string) => {
+    setTargetId(id)
+    onOpenDeleteDialog()
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!targetId) return
+    setIsDeleting(true)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    console.log(`Jurisdiction Level ${targetId} has been deleted.`)
+    setIsDeleting(false)
+    onCloseDeleteDialog()
+  }
+
+  const { columns } = useColumnJurisdictionLevel({
     onView: (item) => openDrawer('view', item),
     onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
@@ -151,23 +136,25 @@ export default function PreparersPage() {
     <div className="flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">DSTax Preparers</h2>
-          <p className="text-muted-foreground">
-            Manage the list of DSTax preparers and their assignments.
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Jurisdiction Level
+          </h2>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            Manage jurisdiction levels such as Country, State, and Local.
           </p>
         </div>
         <Button
-          className="bg-orange-500 hover:bg-orange-600"
+          className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
           onClick={() => openDrawer('create')}
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Preparer
+          <Plus className="mr-2 h-4 w-4" /> Add Level
         </Button>
       </div>
 
       <CommonTable
         columns={columns}
         data={paginatedData}
-        emptyMessage="No preparers found"
+        emptyMessage="No jurisdiction levels found"
         pagination={{
           currentPage,
           totalPages,
@@ -178,6 +165,7 @@ export default function PreparersPage() {
         }}
       />
 
+      {/* Drawer */}
       <Drawer
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
@@ -186,43 +174,45 @@ export default function PreparersPage() {
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {drawerMode === 'create' && 'Add Preparer'}
-              {drawerMode === 'edit' && 'Edit Preparer'}
-              {drawerMode === 'view' && 'Preparer Details'}
+              {drawerMode === 'create' && 'Add Jurisdiction Level'}
+              {drawerMode === 'edit' && 'Edit Jurisdiction Level'}
+              {drawerMode === 'view' && 'Jurisdiction Level Details'}
             </DrawerTitle>
             <DrawerDescription>
               {drawerMode === 'create' &&
-                'Enter the details of the new preparer.'}
+                'Enter the details of the new jurisdiction level.'}
               {drawerMode === 'edit' &&
-                'Update the details of the selected preparer.'}
+                'Update the details of the selected jurisdiction level.'}
               {drawerMode === 'view' &&
-                'Here are the details of the selected preparer.'}
+                'Details of the selected jurisdiction level.'}
             </DrawerDescription>
           </DrawerHeader>
+
           <div className="flex-1 overflow-auto p-4">
             {drawerMode === 'view' && selectedItem && (
               <div className="space-y-4 text-sm">
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Name</span>
-                  <span className="text-zinc-600">{selectedItem.name}</span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Email</span>
-                  <span className="text-zinc-600">{selectedItem.email}</span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">
-                    Assigned Clients
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Level Name
                   </span>
-                  <span className="text-zinc-600">
-                    {selectedItem.assignedClients}
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.name}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Description
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.description ?? '—'}
                   </span>
                 </div>
               </div>
             )}
+
             {(drawerMode === 'create' || drawerMode === 'edit') && (
               <form
-                id="preparer-form"
+                id="jurisdiction-level-form"
                 onSubmit={handleSubmit(onSubmit)}
                 className="mt-2 space-y-4"
               >
@@ -231,36 +221,26 @@ export default function PreparersPage() {
                   name="name"
                   Field={Input}
                   fieldProps={{
-                    label: 'Name',
-                    placeholder: 'e.g. Alice Johnson',
+                    label: 'Level Name',
+                    placeholder: 'e.g. Country',
                   }}
                 />
                 <FormController
                   control={control}
-                  name="email"
+                  name="description"
                   Field={Input}
                   fieldProps={{
-                    label: 'Email',
-                    type: 'email',
-                    placeholder: 'e.g. alice.j@dstax.com',
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="assignedClients"
-                  Field={Input}
-                  fieldProps={{
-                    label: 'Assigned Clients',
-                    type: 'number',
-                    placeholder: 'e.g. 5',
+                    label: 'Description',
+                    placeholder: 'e.g. Top-level national jurisdiction',
                   }}
                 />
               </form>
             )}
           </div>
+
           <DrawerFooter>
             {(drawerMode === 'create' || drawerMode === 'edit') && (
-              <Button type="submit" form="preparer-form">
+              <Button type="submit" form="jurisdiction-level-form">
                 Save changes
               </Button>
             )}
@@ -271,14 +251,15 @@ export default function PreparersPage() {
         </DrawerContent>
       </Drawer>
 
+      {/* Confirm Delete Dialog */}
       <ConfirmDialog
         isOpen={isOpenDeleteDialog}
         onOpenChange={setIsOpenDeleteDialog}
         variant="delete"
-        title="Delete Preparer"
-        description="Are you sure you want to delete this preparer? This action cannot be undone."
+        title="Delete Jurisdiction Level"
+        description="Are you sure you want to delete this jurisdiction level? This action cannot be undone."
         onConfirm={handleConfirmDelete}
-        isLoading={!!isDeleting}
+        isLoading={isDeleting}
       />
     </div>
   )

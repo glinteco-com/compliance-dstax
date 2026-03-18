@@ -7,9 +7,11 @@ import * as z from 'zod'
 import { CommonTable, Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Building2, Plus, Edit2, Trash2, Eye } from 'lucide-react'
-import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import FormController from '@/components/form/FormController'
+import useDialog from '@/hooks/useDialog'
+import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
+import { useColumnLegalEntity } from './hooks/useColumnLegalEntity'
+import { LegalEntity } from '@/types/legal-entity'
 import {
   Drawer,
   DrawerClose,
@@ -19,40 +21,168 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-
-interface LegalEntity {
-  id: string
-  clientName: string
-  entityName: string
-  entityType: string
-  fein: string
-  state: string
-}
+import { Plus } from 'lucide-react'
 
 const mockData: LegalEntity[] = [
   {
     id: '1',
     clientName: 'Global Tech Corp',
-    entityName: 'Global Tech US Inc',
+    entityName: 'Genesis Maintenance Corporation',
     entityType: 'Corporation',
-    fein: '12-3456789',
+    fein: '12-3456781',
     state: 'Delaware',
   },
   {
     id: '2',
     clientName: 'Global Tech Corp',
-    entityName: 'Global Tech West LLC',
-    entityType: 'LLC',
-    fein: '98-7654321',
-    state: 'California',
+    entityName: 'Access Direct Systems Inc',
+    entityType: 'Corporation',
+    fein: '12-3456782',
+    state: 'New York',
   },
   {
     id: '3',
-    clientName: 'Eco Solutions Ltd',
-    entityName: 'Eco Solutions US',
+    clientName: 'Global Tech Corp',
+    entityName: 'Allwork',
+    entityType: 'LLC',
+    fein: '12-3456783',
+    state: 'California',
+  },
+  {
+    id: '4',
+    clientName: 'Global Tech Corp',
+    entityName: 'Best Press',
     entityType: 'Corporation',
-    fein: '45-6789012',
+    fein: '12-3456784',
     state: 'Texas',
+  },
+  {
+    id: '5',
+    clientName: 'Global Tech Corp',
+    entityName: 'Ussery Printing',
+    entityType: 'Corporation',
+    fein: '12-3456785',
+    state: 'Texas',
+  },
+  {
+    id: '6',
+    clientName: 'Global Tech Corp',
+    entityName: 'Blanks Printing & Imaging, Inc.',
+    entityType: 'Corporation',
+    fein: '12-3456786',
+    state: 'Texas',
+  },
+  {
+    id: '7',
+    clientName: 'Global Tech Corp',
+    entityName: 'Blevins, Inc.',
+    entityType: 'Corporation',
+    fein: '12-3456787',
+    state: 'Tennessee',
+  },
+  {
+    id: '8',
+    clientName: 'Global Tech Corp',
+    entityName: 'Carahsoft Technology',
+    entityType: 'Corporation',
+    fein: '12-3456788',
+    state: 'Virginia',
+  },
+  {
+    id: '9',
+    clientName: 'Global Tech Corp',
+    entityName: 'FedResults, Inc.',
+    entityType: 'Corporation',
+    fein: '12-3456789',
+    state: 'Virginia',
+  },
+  {
+    id: '10',
+    clientName: 'Global Tech Corp',
+    entityName: 'Carton Craft Supply',
+    entityType: 'LLC',
+    fein: '12-3456790',
+    state: 'Illinois',
+  },
+  {
+    id: '11',
+    clientName: 'Global Tech Corp',
+    entityName: 'Serviform America',
+    entityType: 'LLC',
+    fein: '12-3456791',
+    state: 'Georgia',
+  },
+  {
+    id: '12',
+    clientName: 'Global Tech Corp',
+    entityName: 'Cutlite Penta America, LLC',
+    entityType: 'LLC',
+    fein: '12-3456792',
+    state: 'Georgia',
+  },
+  {
+    id: '13',
+    clientName: 'Global Tech Corp',
+    entityName: 'CleanConnect AI',
+    entityType: 'Corporation',
+    fein: '12-3456793',
+    state: 'Florida',
+  },
+  {
+    id: '14',
+    clientName: 'Global Tech Corp',
+    entityName: 'Digital Room LLC',
+    entityType: 'LLC',
+    fein: '12-3456794',
+    state: 'California',
+  },
+  {
+    id: '15',
+    clientName: 'Global Tech Corp',
+    entityName: 'Direct Marketing Solutions',
+    entityType: 'Corporation',
+    fein: '12-3456795',
+    state: 'Oregon',
+  },
+  {
+    id: '16',
+    clientName: 'Global Tech Corp',
+    entityName: 'Dynamic Brands LLC',
+    entityType: 'LLC',
+    fein: '12-3456796',
+    state: 'South Carolina',
+  },
+  {
+    id: '17',
+    clientName: 'Global Tech Corp',
+    entityName: 'Dynamic Motion LLC',
+    entityType: 'LLC',
+    fein: '12-3456797',
+    state: 'North Carolina',
+  },
+  {
+    id: '18',
+    clientName: 'Global Tech Corp',
+    entityName: 'Simpler Postage dba EasyPost',
+    entityType: 'Corporation',
+    fein: '12-3456798',
+    state: 'Utah',
+  },
+  {
+    id: '19',
+    clientName: 'Global Tech Corp',
+    entityName: 'Echelon Fitness',
+    entityType: 'Corporation',
+    fein: '12-3456799',
+    state: 'Tennessee',
+  },
+  {
+    id: '20',
+    clientName: 'Global Tech Corp',
+    entityName: 'Echelon Holdings',
+    entityType: 'Corporation',
+    fein: '12-3456800',
+    state: 'Tennessee',
   },
 ]
 
@@ -67,6 +197,18 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export default function LegalEntitiesPage() {
+  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+  const [targetEntityId, setTargetEntityId] = React.useState<string | null>(
+    null
+  )
+
+  const {
+    isOpenDialog: isOpenDeleteDialog,
+    onOpenDialog: onOpenDeleteDialog,
+    onCloseDialog: onCloseDeleteDialog,
+    setIsOpenDialog: setIsOpenDeleteDialog,
+  } = useDialog()
+
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [drawerMode, setDrawerMode] = React.useState<
     'create' | 'edit' | 'view'
@@ -122,77 +264,40 @@ export default function LegalEntitiesPage() {
     setIsDrawerOpen(false)
   }
 
-  const columns: Column<LegalEntity>[] = [
-    {
-      id: 'clientName',
-      label: 'Client Name',
-      render: (item) => (
-        <span className="font-medium text-zinc-900">{item.clientName}</span>
-      ),
-    },
-    {
-      id: 'entityName',
-      label: 'Legal Entity Name',
-      render: (item) => <span>{item.entityName}</span>,
-    },
-    {
-      id: 'entityType',
-      label: 'Entity Type',
-      render: (item) => <span>{item.entityType}</span>,
-    },
-    {
-      id: 'fein',
-      label: 'FEIN',
-      render: (item) => <code className="text-xs">{item.fein}</code>,
-    },
-    {
-      id: 'state',
-      label: 'State',
-      render: (item) => <span>{item.state}</span>,
-    },
-    {
-      id: 'actions',
-      label: '',
-      width: 140,
-      align: 'right',
-      render: (item) => (
-        <div className="flex items-center justify-end gap-2">
-          <CommonTooltip content="View Details">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => openDrawer('view', item)}
-            >
-              <Eye className="h-4 w-4" />
-              <span className="sr-only">View Details</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Edit">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => openDrawer('edit', item)}
-            >
-              <Edit2 className="h-4 w-4" />
-              <span className="sr-only">Edit</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Delete">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-500 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </CommonTooltip>
-        </div>
-      ),
-    },
-  ]
+  const handleDelete = (id: string) => {
+    setTargetEntityId(id)
+    onOpenDeleteDialog()
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!targetEntityId) return
+    setIsDeleting(targetEntityId)
+    // Mocking an async operation
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    alert(`Legal Entity ${targetEntityId} has been deleted.`)
+    setIsDeleting(null)
+    onCloseDeleteDialog()
+  }
+
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
+  const totalPages = Math.ceil(mockData.length / pageSize)
+
+  const paginatedData = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return mockData.slice(startIndex, startIndex + pageSize)
+  }, [currentPage, pageSize])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1) // Reset to first page when page size changes
+  }
+
+  const { columns } = useColumnLegalEntity({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
+    onDelete: handleDelete,
+  })
 
   return (
     <div className="flex-1 space-y-4">
@@ -213,8 +318,16 @@ export default function LegalEntitiesPage() {
 
       <CommonTable
         columns={columns}
-        data={mockData}
+        data={paginatedData}
         emptyMessage="No legal entities found"
+        pagination={{
+          currentPage,
+          totalPages,
+          onPageChange: setCurrentPage,
+          onPageSizeChange: handlePageSizeChange,
+          pageSize,
+          totalItems: mockData.length,
+        }}
       />
 
       <Drawer
@@ -335,6 +448,16 @@ export default function LegalEntitiesPage() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <ConfirmDialog
+        isOpen={isOpenDeleteDialog}
+        onOpenChange={setIsOpenDeleteDialog}
+        variant="delete"
+        title="Delete Legal Entity"
+        description="Are you sure you want to delete this legal entity? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isLoading={!!isDeleting}
+      />
     </div>
   )
 }

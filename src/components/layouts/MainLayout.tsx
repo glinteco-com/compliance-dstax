@@ -80,23 +80,24 @@ const items: NavigationItem[] = [
       {
         title: 'Jurisdictions',
         icon: <Globe className="h-4 w-4" />,
-        items: [
-          {
-            title: 'Level',
-            url: '/master-data/jurisdictions/level',
-            icon: <Layers className="h-4 w-4" />,
-          },
-          // {
-          //   title: 'Due Date',
-          //   url: '/master-data/jurisdictions/due-date',
-          //   icon: <Calendar className="h-4 w-4" />,
-          // },
-          // {
-          //   title: 'Due Date Time',
-          //   url: '/master-data/jurisdictions/due-date-time',
-          //   icon: <Clock className="h-4 w-4" />,
-          // },
-        ],
+        url: '/master-data/jurisdictions',
+        // items: [
+        //   {
+        //     title: 'Due Date',
+        //     url: '/master-data/jurisdictions/due-date',
+        //     icon: <Calendar className="h-4 w-4" />,
+        //   },
+        //   {
+        //     title: 'Due Date Time',
+        //     url: '/master-data/jurisdictions/due-date-time',
+        //     icon: <Clock className="h-4 w-4" />,
+        //   },
+        // ],
+      },
+      {
+        title: 'Jurisdiction Level',
+        url: '/master-data/jurisdictions-level',
+        icon: <Layers className="h-4 w-4" />,
       },
       {
         title: 'Filing Frequencies',
