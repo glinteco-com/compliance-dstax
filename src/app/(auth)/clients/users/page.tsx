@@ -8,9 +8,12 @@ import { CommonTable, Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password'
-import { Plus, Edit2, Trash2, Key, Eye } from 'lucide-react'
-import CommonTooltip from '@/components/tooltip/CommonTooltip'
+import { Plus } from 'lucide-react'
 import FormController from '@/components/form/FormController'
+import useDialog from '@/hooks/useDialog'
+import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
+import { useColumnClientUser } from './hooks/useColumnClientUser'
+import { User } from '@/types/user'
 import {
   Drawer,
   DrawerClose,
@@ -20,15 +23,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-
-interface User {
-  id: string
-  clientName: string
-  name: string
-  username: string
-  password?: string
-  role: string
-}
 
 const mockData: User[] = [
   {
@@ -69,6 +63,23 @@ type FormValues = z.infer<typeof formSchema>
 
 export default function UsersPage() {
   const [isResetting, setIsResetting] = React.useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+
+  const {
+    isOpenDialog: isOpenResetDialog,
+    onOpenDialog: onOpenResetDialog,
+    onCloseDialog: onCloseResetDialog,
+    setIsOpenDialog: setIsOpenResetDialog,
+  } = useDialog()
+
+  const {
+    isOpenDialog: isOpenDeleteDialog,
+    onOpenDialog: onOpenDeleteDialog,
+    onCloseDialog: onCloseDeleteDialog,
+    setIsOpenDialog: setIsOpenDeleteDialog,
+  } = useDialog()
+
+  const [targetUserId, setTargetUserId] = React.useState<string | null>(null)
 
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [drawerMode, setDrawerMode] = React.useState<
@@ -124,108 +135,57 @@ export default function UsersPage() {
   }
 
   const handleResetPassword = (id: string) => {
-    setIsResetting(id)
-    // Mocking an async operation
-    setTimeout(() => {
-      alert(`Password reset for user ${id}. A reset link has been sent.`)
-      setIsResetting(null)
-    }, 1000)
+    setTargetUserId(id)
+    onOpenResetDialog()
   }
 
-  const columns: Column<User>[] = [
-    {
-      id: 'clientName',
-      label: 'Client Name',
-      render: (item) => (
-        <span className="font-medium text-zinc-900">{item.clientName}</span>
-      ),
-    },
-    {
-      id: 'name',
-      label: 'Name',
-      render: (item) => <span>{item.name}</span>,
-    },
-    {
-      id: 'username',
-      label: 'Username',
-      render: (item) => (
-        <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-800">
-          {item.username}
-        </code>
-      ),
-    },
-    {
-      id: 'password',
-      label: 'Password',
-      render: (item) => (
-        <span className="font-mono tracking-widest text-zinc-400">
-          {item.password}
-        </span>
-      ),
-    },
-    {
-      id: 'role',
-      label: 'User Role',
-      render: (item) => (
-        <span className="inline-flex items-center rounded-full bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-700/10 ring-inset dark:bg-zinc-900 dark:text-zinc-400 dark:ring-white/10">
-          {item.role}
-        </span>
-      ),
-    },
-    {
-      id: 'actions',
-      label: '',
-      width: 180,
-      align: 'right',
-      render: (item) => (
-        <div className="flex items-center justify-end gap-2">
-          <CommonTooltip content="View Details">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => openDrawer('view', item)}
-            >
-              <Eye className="h-4 w-4" />
-              <span className="sr-only">View Details</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Edit">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => openDrawer('edit', item)}
-            >
-              <Edit2 className="h-4 w-4" />
-              <span className="sr-only">Edit</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Reset Password">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => handleResetPassword(item.id)}
-            >
-              <Key className="h-4 w-4" />
-              <span className="sr-only">Reset Password</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Delete">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-500 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </CommonTooltip>
-        </div>
-      ),
-    },
-  ]
+  const handleConfirmResetPassword = async () => {
+    if (!targetUserId) return
+    setIsResetting(targetUserId)
+    // Mocking an async operation
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    alert(
+      `Password reset for user ${targetUserId}. A reset link has been sent.`
+    )
+    setIsResetting(null)
+    onCloseResetDialog()
+  }
+
+  const handleDelete = (id: string) => {
+    setTargetUserId(id)
+    onOpenDeleteDialog()
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!targetUserId) return
+    setIsDeleting(targetUserId)
+    // Mocking an async operation
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    alert(`User ${targetUserId} has been deleted.`)
+    setIsDeleting(null)
+    onCloseDeleteDialog()
+  }
+
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
+  const totalPages = Math.ceil(mockData.length / pageSize)
+
+  const paginatedData = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return mockData.slice(startIndex, startIndex + pageSize)
+  }, [currentPage, pageSize])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+  }
+
+  const { columns } = useColumnClientUser({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
+    onResetPassword: handleResetPassword,
+    onDelete: handleDelete,
+  })
 
   return (
     <div className="flex-1 space-y-4">
@@ -246,8 +206,16 @@ export default function UsersPage() {
 
       <CommonTable
         columns={columns}
-        data={mockData}
+        data={paginatedData}
         emptyMessage="No users found"
+        pagination={{
+          currentPage,
+          totalPages,
+          onPageChange: setCurrentPage,
+          onPageSizeChange: handlePageSizeChange,
+          pageSize,
+          totalItems: mockData.length,
+        }}
       />
 
       <Drawer
@@ -361,6 +329,26 @@ export default function UsersPage() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <ConfirmDialog
+        isOpen={isOpenResetDialog}
+        onOpenChange={setIsOpenResetDialog}
+        title="Reset Password"
+        description="Are you sure you want to reset the password for this user? A reset link will be sent to their email."
+        confirmText="Reset"
+        onConfirm={handleConfirmResetPassword}
+        isLoading={!!isResetting}
+      />
+
+      <ConfirmDialog
+        isOpen={isOpenDeleteDialog}
+        onOpenChange={setIsOpenDeleteDialog}
+        variant="delete"
+        title="Delete User"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isLoading={!!isDeleting}
+      />
     </div>
   )
 }

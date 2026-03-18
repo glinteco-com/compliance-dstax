@@ -4,12 +4,14 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { CommonTable, Column } from '@/components/table/CommonTable'
+import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit2, Trash2, Mail, Eye } from 'lucide-react'
-import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import FormController from '@/components/form/FormController'
+import useDialog from '@/hooks/useDialog'
+import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
+import { useColumnDstaxPreparer } from './hooks/useColumnDstaxPreparer'
+import { Preparer } from '@/types/dstax-preparer'
 import {
   Drawer,
   DrawerClose,
@@ -19,13 +21,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-
-interface Preparer {
-  id: string
-  name: string
-  email: string
-  assignedClients: number
-}
+import { Plus } from 'lucide-react'
 
 const mockData: Preparer[] = [
   {
@@ -57,6 +53,18 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export default function PreparersPage() {
+  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+  const [targetPreparerId, setTargetPreparerId] = React.useState<string | null>(
+    null
+  )
+
+  const {
+    isOpenDialog: isOpenDeleteDialog,
+    onOpenDialog: onOpenDeleteDialog,
+    onCloseDialog: onCloseDeleteDialog,
+    setIsOpenDialog: setIsOpenDeleteDialog,
+  } = useDialog()
+
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [drawerMode, setDrawerMode] = React.useState<
     'create' | 'edit' | 'view'
@@ -104,77 +112,40 @@ export default function PreparersPage() {
     setIsDrawerOpen(false)
   }
 
-  const columns: Column<Preparer>[] = [
-    {
-      id: 'name',
-      label: 'Name',
-      render: (item) => (
-        <span className="font-medium text-zinc-900">{item.name}</span>
-      ),
-    },
-    {
-      id: 'email',
-      label: 'Email',
-      render: (item) => (
-        <a
-          href={`mailto:${item.email}`}
-          className="inline-flex items-center text-zinc-600 hover:text-zinc-900"
-        >
-          <Mail className="mr-2 h-4 w-4" />
-          {item.email}
-        </a>
-      ),
-    },
-    {
-      id: 'assignedClients',
-      label: 'Assigned Clients',
-      render: (item) => (
-        <span className="text-zinc-600">{item.assignedClients}</span>
-      ),
-    },
-    {
-      id: 'actions',
-      label: '',
-      width: 140,
-      align: 'right',
-      render: (item) => (
-        <div className="flex items-center justify-end gap-2">
-          <CommonTooltip content="View Details">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => openDrawer('view', item)}
-            >
-              <Eye className="h-4 w-4" />
-              <span className="sr-only">View Details</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Edit">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => openDrawer('edit', item)}
-            >
-              <Edit2 className="h-4 w-4" />
-              <span className="sr-only">Edit</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Delete">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-500 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </CommonTooltip>
-        </div>
-      ),
-    },
-  ]
+  const handleDelete = (id: string) => {
+    setTargetPreparerId(id)
+    onOpenDeleteDialog()
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!targetPreparerId) return
+    setIsDeleting(targetPreparerId)
+    // Mocking an async operation
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    alert(`Preparer ${targetPreparerId} has been deleted.`)
+    setIsDeleting(null)
+    onCloseDeleteDialog()
+  }
+
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
+  const totalPages = Math.ceil(mockData.length / pageSize)
+
+  const paginatedData = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return mockData.slice(startIndex, startIndex + pageSize)
+  }, [currentPage, pageSize])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+  }
+
+  const { columns } = useColumnDstaxPreparer({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
+    onDelete: handleDelete,
+  })
 
   return (
     <div className="flex-1 space-y-4">
@@ -195,8 +166,16 @@ export default function PreparersPage() {
 
       <CommonTable
         columns={columns}
-        data={mockData}
+        data={paginatedData}
         emptyMessage="No preparers found"
+        pagination={{
+          currentPage,
+          totalPages,
+          onPageChange: setCurrentPage,
+          onPageSizeChange: handlePageSizeChange,
+          pageSize,
+          totalItems: mockData.length,
+        }}
       />
 
       <Drawer
@@ -291,6 +270,16 @@ export default function PreparersPage() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <ConfirmDialog
+        isOpen={isOpenDeleteDialog}
+        onOpenChange={setIsOpenDeleteDialog}
+        variant="delete"
+        title="Delete Preparer"
+        description="Are you sure you want to delete this preparer? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isLoading={!!isDeleting}
+      />
     </div>
   )
 }
