@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password'
+import { CommonSelect } from '@/components/select/CommonSelect'
 import { ElementType } from 'react'
 import { Control, Controller, FieldValues, Path } from 'react-hook-form'
 
@@ -11,6 +12,7 @@ type Props<FormType extends FieldValues, FieldProps> = {
   hasDefaultBlur?: boolean
 }
 const textFields: ElementType[] = [Input, PasswordInput]
+const selectFields: ElementType[] = [CommonSelect]
 
 function FormController<FormType extends FieldValues, FieldProps>({
   name,
@@ -20,6 +22,7 @@ function FormController<FormType extends FieldValues, FieldProps>({
   hasDefaultBlur = true,
 }: Props<FormType, FieldProps>) {
   const isTextField = textFields.includes(Field)
+  const isSelectField = selectFields.includes(Field)
 
   return (
     <div>
@@ -44,6 +47,7 @@ function FormController<FormType extends FieldValues, FieldProps>({
               id={field.name}
               error={fieldState.error?.message}
               {...(hasDefaultBlur && isTextField ? { onBlur } : {})}
+              {...(isSelectField ? { onChange: field.onChange } : {})}
             />
           )
         }}
