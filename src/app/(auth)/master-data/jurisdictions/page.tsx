@@ -7,6 +7,7 @@ import * as z from 'zod'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { InputDatePicker } from '@/components/date-picker/date-picker'
 import { Plus } from 'lucide-react'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
@@ -341,10 +342,10 @@ export default function JurisdictionsPage() {
                 <FormController
                   control={control}
                   name="dueDate"
-                  Field={Input}
+                  Field={InputDatePicker}
                   fieldProps={{
                     label: 'Due Date',
-                    type: 'date',
+                    placeholder: 'Select due date',
                   }}
                 />
 
