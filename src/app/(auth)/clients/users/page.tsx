@@ -4,15 +4,17 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { CommonTable, Column } from '@/components/table/CommonTable'
+import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password'
-import { Plus } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
 import FormController from '@/components/form/FormController'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useColumnClientUser } from './hooks/useColumnClientUser'
+import { useUsers } from './hooks/useUsers'
 import { User } from '@/types/user'
 import {
   Drawer,
@@ -23,33 +25,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-
-const mockData: User[] = [
-  {
-    id: '1',
-    clientName: 'Global Tech Corp',
-    name: 'Emily Smith',
-    username: 'esmith',
-    password: '••••••••',
-    role: 'Admin',
-  },
-  {
-    id: '2',
-    clientName: 'Global Tech Corp',
-    name: 'Josh Miller',
-    username: 'jmiller',
-    password: '••••••••',
-    role: 'Viewer',
-  },
-  {
-    id: '3',
-    clientName: 'Eco Solutions Ltd',
-    name: 'Sarah Lee',
-    username: 'slee',
-    password: '••••••••',
-    role: 'Editor',
-  },
-]
 
 const formSchema = z.object({
   clientName: z.string().min(1, 'Client Name is required'),
@@ -166,14 +141,24 @@ export default function UsersPage() {
     onCloseDeleteDialog()
   }
 
+  const [searchInput, setSearchInput] = React.useState('')
+  const search = useDebounce(searchInput, 400)
+
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
-  const totalPages = Math.ceil(mockData.length / pageSize)
 
-  const paginatedData = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    return mockData.slice(startIndex, startIndex + pageSize)
-  }, [currentPage, pageSize])
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  const { data, isLoading } = useUsers({
+    page: currentPage,
+    pageSize,
+    search: search || undefined,
+  })
+
+  const paginatedData = data?.results ?? []
+  const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -196,25 +181,37 @@ export default function UsersPage() {
             Manage users for each client and their access roles.
           </p>
         </div>
-        <Button
-          className="bg-orange-500 hover:bg-orange-600"
-          onClick={() => openDrawer('create')}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add User
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Input
+              placeholder="Search..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-56"
+              prefixIcon={<Search />}
+            />
+          </div>
+          <Button
+            className="bg-orange-500 hover:bg-orange-600"
+            onClick={() => openDrawer('create')}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add User
+          </Button>
+        </div>
       </div>
 
       <CommonTable
         columns={columns}
         data={paginatedData}
         emptyMessage="No users found"
+        isLoading={isLoading}
         pagination={{
           currentPage,
           totalPages,
           onPageChange: setCurrentPage,
           onPageSizeChange: handlePageSizeChange,
           pageSize,
-          totalItems: mockData.length,
+          totalItems: data?.count ?? 0,
         }}
       />
 

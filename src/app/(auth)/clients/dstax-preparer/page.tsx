@@ -11,6 +11,7 @@ import FormController from '@/components/form/FormController'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useColumnDstaxPreparer } from './hooks/useColumnDstaxPreparer'
+import { usePreparers } from './hooks/usePreparers'
 import { Preparer } from '@/types/dstax-preparer'
 import {
   Drawer,
@@ -21,28 +22,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { Plus } from 'lucide-react'
-
-const mockData: Preparer[] = [
-  {
-    id: '1',
-    name: 'Alice Johnson',
-    email: 'alice.j@dstax.com',
-    assignedClients: 5,
-  },
-  {
-    id: '2',
-    name: 'Bob Richards',
-    email: 'bob.r@dstax.com',
-    assignedClients: 3,
-  },
-  {
-    id: '3',
-    name: 'Charlie Davis',
-    email: 'charlie.d@dstax.com',
-    assignedClients: 8,
-  },
-]
+import { Search, Plus } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -127,14 +108,24 @@ export default function PreparersPage() {
     onCloseDeleteDialog()
   }
 
+  const [searchInput, setSearchInput] = React.useState('')
+  const search = useDebounce(searchInput, 400)
+
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
-  const totalPages = Math.ceil(mockData.length / pageSize)
 
-  const paginatedData = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    return mockData.slice(startIndex, startIndex + pageSize)
-  }, [currentPage, pageSize])
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  const { data, isLoading } = usePreparers({
+    page: currentPage,
+    pageSize,
+    search: search || undefined,
+  })
+
+  const paginatedData = data?.results ?? []
+  const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -156,25 +147,37 @@ export default function PreparersPage() {
             Manage the list of DSTax preparers and their assignments.
           </p>
         </div>
-        <Button
-          className="bg-orange-500 hover:bg-orange-600"
-          onClick={() => openDrawer('create')}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Preparer
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Input
+              placeholder="Search..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-56"
+              prefixIcon={<Search />}
+            />
+          </div>
+          <Button
+            className="bg-orange-500 hover:bg-orange-600"
+            onClick={() => openDrawer('create')}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Preparer
+          </Button>
+        </div>
       </div>
 
       <CommonTable
         columns={columns}
         data={paginatedData}
         emptyMessage="No preparers found"
+        isLoading={isLoading}
         pagination={{
           currentPage,
           totalPages,
           onPageChange: setCurrentPage,
           onPageSizeChange: handlePageSizeChange,
           pageSize,
-          totalItems: mockData.length,
+          totalItems: data?.count ?? 0,
         }}
       />
 

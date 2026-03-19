@@ -9,7 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Loading } from '@/components/loading/Loading'
+import { NoData } from '@/components/no-data/NoData'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
@@ -71,22 +72,15 @@ export function CommonTable<T>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array.from({ length: 5 }).map((_, rowIndex) => (
-                <TableRow key={rowIndex}>
-                  {columns.map((_, colIndex) => (
-                    <TableCell key={colIndex}>
-                      <Skeleton className="h-6 w-full" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              <TableRow>
+                <TableCell colSpan={columns.length} className="p-0">
+                  <Loading />
+                </TableCell>
+              </TableRow>
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-32 text-center text-zinc-500 dark:text-zinc-400"
-                >
-                  {emptyMessage}
+                <TableCell colSpan={columns.length} className="p-0">
+                  <NoData message={emptyMessage} />
                 </TableCell>
               </TableRow>
             ) : (
