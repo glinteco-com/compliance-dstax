@@ -1,3 +1,9 @@
+export interface LegalEntityParams {
+  page: number
+  pageSize: number
+  search?: string
+}
+
 export interface LegalEntity {
   id: string
   clientName: string

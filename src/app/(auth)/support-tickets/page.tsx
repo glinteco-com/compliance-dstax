@@ -1,10 +1,10 @@
 'use client'
 
 import * as React from 'react'
-import { CommonTable, Column } from '@/components/table/CommonTable'
-import { cn } from '@/lib/utils'
+import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
-import { Plus, Eye, Loader2 } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
+import { CommonSelect } from '@/components/select/CommonSelect'
 import {
   Drawer,
   DrawerContent,
@@ -21,6 +21,17 @@ import FormController from '@/components/form/FormController'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { Ticket as TicketType } from '@/types/support-ticket'
+import {
+  useSupportTickets,
+  useCreateTicket,
+  useUpdateTicket,
+  useDeleteTicket,
+} from './hooks/useSupportTickets'
+import { useColumnSupportTicket } from './hooks/useColumnSupportTicket'
+import useDialog from '@/hooks/useDialog'
+import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
+import { useDebounce } from '@/hooks/useDebounce'
 
 const ticketSchema = z.object({
   name: z.string().min(1, 'Ticket name is required'),
@@ -28,320 +39,369 @@ const ticketSchema = z.object({
   createdDate: z.string().min(1, 'Create date is required'),
   priority: z.enum(['low', 'normal', 'high']),
   description: z.string().min(1, 'Description is required'),
-  dueDate: z.string().optional(),
+  dueDate: z.string().optional().or(z.literal('')),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
 })
 
 type TicketFormValues = z.infer<typeof ticketSchema>
 
-interface Ticket {
-  id: string
-  createdDate: string
-  name: string
-  priority: 'low' | 'normal' | 'high'
-  email: string
-  summary?: string
-  description?: string
-  dueDate?: string
-}
-
-const MOCK_TICKETS: Ticket[] = [
-  {
-    id: 'TICK-1001',
-    createdDate: '2024-03-15',
-    name: 'Login Issue',
-    priority: 'high',
-    email: 'user1@example.com',
-    summary: 'Cannot login to the application',
-    description: 'When I enter my credentials, it just refreshes the page.',
-    dueDate: '2024-03-20',
-  },
-  {
-    id: 'TICK-1002',
-    createdDate: '2024-03-14',
-    name: 'Dashboard not loading',
-    priority: 'high',
-    email: 'user2@example.com',
-    summary: 'Blank screen after login',
-    description: 'The dashboard widgets are not showing up.',
-    dueDate: '2024-03-18',
-  },
-  {
-    id: 'TICK-1003',
-    createdDate: '2024-03-13',
-    name: 'Question about reports',
-    priority: 'normal',
-    email: 'user3@example.com',
-    summary: 'How to export PDF?',
-    description: 'I need to know where the export button for PDF reports is.',
-    dueDate: '2024-03-25',
-  },
-  {
-    id: 'TICK-1004',
-    createdDate: '2024-03-12',
-    name: 'Mobile responsive issue',
-    priority: 'low',
-    email: 'user4@example.com',
-  },
-  {
-    id: 'TICK-1005',
-    createdDate: '2024-03-11',
-    name: 'Feature request: export CSV',
-    priority: 'normal',
-    email: 'user5@example.com',
-  },
-]
-
 export default function SupportTicketsPage() {
-  const [page, setPage] = React.useState(1)
-  const [isOpen, setIsOpen] = React.useState(false)
-  const [selectedTicket, setSelectedTicket] = React.useState<Ticket | null>(
+  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+  const [targetTicketId, setTargetTicketId] = React.useState<string | null>(
     null
   )
 
-  const form = useForm<TicketFormValues>({
+  const {
+    isOpenDialog: isOpenDeleteDialog,
+    onOpenDialog: onOpenDeleteDialog,
+    onCloseDialog: onCloseDeleteDialog,
+    setIsOpenDialog: setIsOpenDeleteDialog,
+  } = useDialog()
+
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] = React.useState<TicketType | null>(
+    null
+  )
+
+  const {
+    control,
+    reset,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
     defaultValues: {
       name: '',
       summary: '',
       createdDate: new Date().toISOString().split('T')[0],
-      priority: 'normal',
+      priority: 'low',
       description: '',
       dueDate: '',
+      email: '',
     },
   })
 
-  React.useEffect(() => {
-    if (selectedTicket) {
-      form.reset({
-        name: selectedTicket.name,
-        summary: selectedTicket.summary || '',
-        createdDate: selectedTicket.createdDate,
-        priority: selectedTicket.priority,
-        description: selectedTicket.description || '',
-        dueDate: selectedTicket.dueDate || '',
+  const createTicketMutation = useCreateTicket()
+  const updateTicketMutation = useUpdateTicket()
+  const deleteTicketMutation = useDeleteTicket()
+
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: TicketType | null = null
+  ) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({
+        name: item.name,
+        summary: item.summary || '',
+        createdDate: item.createdDate,
+        priority: item.priority,
+        description: item.description || '',
+        dueDate: item.dueDate || '',
+        email: item.email || '',
       })
-    } else {
-      form.reset({
+    } else if (mode === 'create') {
+      reset({
         name: '',
         summary: '',
         createdDate: new Date().toISOString().split('T')[0],
-        priority: 'normal',
+        priority: 'low',
         description: '',
         dueDate: '',
+        email: '',
       })
     }
-  }, [selectedTicket, form])
-
-  const onSubmit = (data: TicketFormValues) => {
-    console.log('Form data:', data)
-    // Here you would normally call an API
-    setIsOpen(false)
+    setIsDrawerOpen(true)
   }
 
-  const handleOpenCreate = () => {
-    setSelectedTicket(null)
-    setIsOpen(true)
+  const onSubmit = async (data: TicketFormValues) => {
+    if (drawerMode === 'create') {
+      await createTicketMutation.mutateAsync(data)
+    } else if (drawerMode === 'edit' && selectedItem) {
+      await updateTicketMutation.mutateAsync({ ...data, id: selectedItem.id })
+    }
+    setIsDrawerOpen(false)
   }
 
-  const handleOpenView = (ticket: Ticket) => {
-    setSelectedTicket(ticket)
-    setIsOpen(true)
+  const handleDelete = (id: string) => {
+    setTargetTicketId(id)
+    onOpenDeleteDialog()
   }
 
-  const columns: Column<Ticket>[] = [
-    {
-      id: 'id',
-      label: 'ID',
-      className: 'font-mono text-xs w-[100px]',
-      render: (ticket) => ticket.id,
-    },
-    {
-      id: 'createdDate',
-      label: 'Created Date',
-      render: (ticket) => ticket.createdDate,
-    },
-    {
-      id: 'name',
-      label: 'Name',
-      render: (ticket) => ticket.name,
-    },
-    {
-      id: 'priority',
-      label: 'Priority',
-      render: (ticket: Ticket) => {
-        const priorityColors = {
-          low: 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
-          normal:
-            'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-          high: 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800',
-        }
+  const handleConfirmDelete = async () => {
+    if (!targetTicketId) return
+    setIsDeleting(targetTicketId)
+    await deleteTicketMutation.mutateAsync(targetTicketId)
+    setIsDeleting(null)
+    onCloseDeleteDialog()
+  }
 
-        return (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize',
-              priorityColors[ticket.priority]
-            )}
-          >
-            {ticket.priority}
-          </span>
-        )
-      },
-    },
-    {
-      id: 'email',
-      label: 'Email',
-      render: (ticket) => ticket.email,
-    },
-    {
-      id: 'actions',
-      label: 'Actions',
-      align: 'center',
-      render: (ticket) => (
-        <Button
-          variant="outline"
-          size="icon-sm"
-          onClick={() => handleOpenView(ticket)}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-      ),
-    },
-  ]
+  const [searchInput, setSearchInput] = React.useState('')
+  const search = useDebounce(searchInput, 400)
+
+  const [priority, setPriority] = React.useState<
+    'low' | 'normal' | 'high' | 'all'
+  >('all')
+
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [pageSize, setPageSize] = React.useState(10)
+
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [search, priority])
+
+  const { data, isLoading } = useSupportTickets({
+    page: currentPage,
+    pageSize,
+    search: search || undefined,
+    priority: priority !== 'all' ? priority : undefined,
+  })
+
+  const paginatedData = data?.results ?? []
+  const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+  }
+
+  const { columns } = useColumnSupportTicket({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
+    onDelete: handleDelete,
+  })
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="flex-1 space-y-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Support Tickets
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-2xl font-bold tracking-tight">Support Tickets</h2>
+          <p className="text-muted-foreground">
             Manage and respond to user support requests.
           </p>
         </div>
-
-        <Button onClick={handleOpenCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Ticket
-        </Button>
+        <div className="flex items-center gap-2">
+          <CommonSelect
+            placeholder="All Priorities"
+            value={priority}
+            onChange={(val) =>
+              setPriority(val as 'low' | 'normal' | 'high' | 'all')
+            }
+            options={[
+              { value: 'all', label: 'All Priorities' },
+              { value: 'low', label: 'Low' },
+              { value: 'normal', label: 'Normal' },
+              { value: 'high', label: 'High' },
+            ]}
+            className="w-40"
+          />
+          <div className="relative">
+            <Input
+              placeholder="Search..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-56"
+              prefixIcon={<Search />}
+            />
+          </div>
+          <Button
+            className="bg-orange-500 hover:bg-orange-600"
+            onClick={() => openDrawer('create')}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Ticket
+          </Button>
+        </div>
       </div>
 
       <CommonTable
         columns={columns}
-        data={MOCK_TICKETS}
+        data={paginatedData}
+        emptyMessage="No tickets found"
+        isLoading={isLoading}
         pagination={{
-          currentPage: page,
-          totalPages: 1,
-          onPageChange: (newPage) => setPage(newPage),
-          totalItems: MOCK_TICKETS.length,
+          currentPage,
+          totalPages,
+          onPageChange: setCurrentPage,
+          onPageSizeChange: handlePageSizeChange,
+          pageSize,
+          totalItems: data?.count ?? 0,
         }}
       />
 
-      <Drawer open={isOpen} onOpenChange={setIsOpen} direction="right">
-        <DrawerContent className="flex h-full flex-col">
-          <DrawerHeader className="border-b px-6 py-4">
+      <Drawer
+        open={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        direction="right"
+      >
+        <DrawerContent>
+          <DrawerHeader>
             <DrawerTitle>
-              {selectedTicket
-                ? `Ticket Details: ${selectedTicket.id}`
-                : 'Create New Ticket'}
+              {drawerMode === 'create' && 'Create New Ticket'}
+              {drawerMode === 'edit' && `Edit Ticket: ${selectedItem?.id}`}
+              {drawerMode === 'view' && `Ticket Details: ${selectedItem?.id}`}
             </DrawerTitle>
             <DrawerDescription>
-              {selectedTicket
-                ? 'Review the ticket information below.'
-                : 'Fill in the details to create a new support ticket.'}
+              {drawerMode === 'create' &&
+                'Fill in the details to create a new support ticket.'}
+              {drawerMode === 'edit' &&
+                'Update the details of the selected ticket.'}
+              {drawerMode === 'view' &&
+                'Here are the details of the selected ticket.'}
             </DrawerDescription>
           </DrawerHeader>
-
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex-1 space-y-4 overflow-y-auto px-6 py-6"
-          >
-            <FormController
-              name="name"
-              control={form.control}
-              Field={Input}
-              fieldProps={{
-                label: 'Name ticket',
-                placeholder: 'Enter ticket name',
-                disabled: !!selectedTicket,
-              }}
-            />
-
-            <FormController
-              name="summary"
-              control={form.control}
-              Field={Input}
-              fieldProps={{
-                label: 'Summary of the problem',
-                placeholder: 'Brief summary',
-                disabled: !!selectedTicket,
-              }}
-            />
-
-            <FormController
-              name="createdDate"
-              control={form.control}
-              Field={InputDatePicker}
-              fieldProps={{
-                label: 'Create date',
-                disabled: true, // Usually auto-generated
-              }}
-            />
-
-            <FormController
-              name="priority"
-              control={form.control}
-              Field={Input} // Using Input for now as requested, though ideally a Select
-              fieldProps={{
-                label: 'Priority',
-                placeholder: 'low, normal, high',
-                disabled: !!selectedTicket,
-              }}
-            />
-
-            <FormController
-              name="description"
-              control={form.control}
-              Field={Textarea}
-              fieldProps={{
-                label: 'Description issue',
-                placeholder: 'Detailed description',
-                disabled: !!selectedTicket,
-                rows: 5,
-              }}
-            />
-
-            <FormController
-              name="dueDate"
-              control={form.control}
-              Field={InputDatePicker}
-              fieldProps={{
-                label: 'Due on',
-                disabled: !!selectedTicket,
-              }}
-            />
-          </form>
-
-          <DrawerFooter className="flex-row gap-2 border-t px-6 py-4">
-            {!selectedTicket && (
-              <Button
-                type="submit"
-                className="flex-1"
-                onClick={form.handleSubmit(onSubmit)}
-                isLoading={form.formState.isSubmitting}
+          <div className="flex-1 overflow-auto p-4">
+            {drawerMode === 'view' && selectedItem && (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">ID</span>
+                  <span className="text-zinc-600">{selectedItem.id}</span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">
+                    Created Date
+                  </span>
+                  <span className="text-zinc-600">
+                    {selectedItem.createdDate}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">Name</span>
+                  <span className="text-zinc-600">{selectedItem.name}</span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">Summary</span>
+                  <span className="text-zinc-600">{selectedItem.summary}</span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">Priority</span>
+                  <span className="text-zinc-600">{selectedItem.priority}</span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">Email</span>
+                  <span className="text-zinc-600">{selectedItem.email}</span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">
+                    Description
+                  </span>
+                  <span className="text-zinc-600">
+                    {selectedItem.description}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">Due Date</span>
+                  <span className="text-zinc-600">{selectedItem.dueDate}</span>
+                </div>
+              </div>
+            )}
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <form
+                id="ticket-form"
+                onSubmit={handleSubmit(onSubmit)}
+                className="mt-2 space-y-4"
               >
-                Create Ticket
+                <FormController
+                  control={control}
+                  name="name"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Ticket Name',
+                    placeholder: 'Enter ticket name',
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="summary"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Summary of the Problem',
+                    placeholder: 'Brief summary',
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="createdDate"
+                  Field={InputDatePicker}
+                  fieldProps={{
+                    label: 'Create Date',
+                    disabled: true,
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="priority"
+                  Field={CommonSelect}
+                  fieldProps={{
+                    label: 'Priority',
+                    placeholder: 'Select priority',
+                    options: [
+                      { value: 'low', label: 'Low' },
+                      { value: 'normal', label: 'Normal' },
+                      { value: 'high', label: 'High' },
+                    ],
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="email"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'User Email',
+                    type: 'email',
+                    placeholder: 'e.g. user@example.com',
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="description"
+                  Field={Textarea}
+                  fieldProps={{
+                    label: 'Description Issue',
+                    placeholder: 'Detailed description',
+                    rows: 5,
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="dueDate"
+                  Field={InputDatePicker}
+                  fieldProps={{
+                    label: 'Due On',
+                  }}
+                />
+              </form>
+            )}
+          </div>
+          <DrawerFooter>
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <Button type="submit" form="ticket-form" isLoading={isSubmitting}>
+                Save Changes
               </Button>
             )}
             <DrawerClose asChild>
-              <Button variant="outline" className="flex-1">
-                Close
-              </Button>
+              <Button variant="outline">Close</Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <ConfirmDialog
+        isOpen={isOpenDeleteDialog}
+        onOpenChange={setIsOpenDeleteDialog}
+        variant="delete"
+        title="Delete Ticket"
+        description="Are you sure you want to delete this ticket? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isLoading={!!isDeleting}
+      />
     </div>
   )
 }
