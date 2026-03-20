@@ -7,7 +7,7 @@ import * as z from 'zod'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import FormController from '@/components/form/FormController'
@@ -21,46 +21,8 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { useColumnFilingFrequency } from './hooks/useColumnFilingFrequency'
-import { FilingFrequency } from '@/types/filing-frequency'
-
-const mockData: FilingFrequency[] = [
-  {
-    id: '1',
-    type: 'M',
-    description: 'Monthly',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: '2',
-    type: 'W',
-    description: 'Weekly',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: '3',
-    type: 'Q',
-    description: 'Quarterly',
-    createdAt: '2026-01-15',
-  },
-  {
-    id: '4',
-    type: 'A',
-    description: 'Annual',
-    createdAt: '2026-01-15',
-  },
-  {
-    id: '5',
-    type: 'SA',
-    description: 'Semi-Annual',
-    createdAt: '2026-02-01',
-  },
-  {
-    id: '6',
-    type: 'D',
-    description: 'Daily',
-    createdAt: '2026-02-01',
-  },
-]
+import { useFilingFrequencies } from './hooks/useFilingFrequencies'
+import { useDebounce } from '@/hooks/useDebounce'
 
 const formSchema = z.object({
   type: z
@@ -85,14 +47,24 @@ export default function FilingFrequenciesPage() {
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
 
+  const [searchInput, setSearchInput] = React.useState('')
+  const search = useDebounce(searchInput, 400)
+
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
-  const totalPages = Math.ceil(mockData.length / pageSize)
 
-  const paginatedData = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    return mockData.slice(startIndex, startIndex + pageSize)
-  }, [currentPage, pageSize])
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  const { data, isLoading } = useFilingFrequencies({
+    page: currentPage,
+    pageSize,
+    search: search || undefined,
+  })
+
+  const paginatedData = data?.results ?? []
+  const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -147,25 +119,37 @@ export default function FilingFrequenciesPage() {
             Quarterly.
           </p>
         </div>
-        <Button
-          className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-          onClick={openDrawer}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Frequency
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Input
+              placeholder="Search..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-56"
+              prefixIcon={<Search />}
+            />
+          </div>
+          <Button
+            className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
+            onClick={openDrawer}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Frequency
+          </Button>
+        </div>
       </div>
 
       <CommonTable
         columns={columns}
         data={paginatedData}
         emptyMessage="No filing frequencies found"
+        isLoading={isLoading}
         pagination={{
           currentPage,
           totalPages,
           onPageChange: setCurrentPage,
           onPageSizeChange: handlePageSizeChange,
           pageSize,
-          totalItems: mockData.length,
+          totalItems: data?.count ?? 0,
         }}
       />
 
