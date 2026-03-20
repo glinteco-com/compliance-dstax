@@ -7,7 +7,7 @@ import * as z from 'zod'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import FormController from '@/components/form/FormController'
@@ -21,25 +21,9 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { useColumnJurisdictionLevel } from './hooks/useColumnJurisdictionLevel'
+import { useJurisdictionLevels } from './hooks/useJurisdictionLevels'
 import { JurisdictionLevel } from '@/types/jurisdiction-level'
-
-const mockData: JurisdictionLevel[] = [
-  {
-    id: '1',
-    name: 'Country',
-    description: 'Top-level national jurisdiction',
-  },
-  {
-    id: '2',
-    name: 'State',
-    description: 'State or provincial jurisdiction',
-  },
-  {
-    id: '3',
-    name: 'Local',
-    description: 'City, county, or local municipality',
-  },
-]
+import { useDebounce } from '@/hooks/useDebounce'
 
 const formSchema = z.object({
   name: z.string().min(1, 'Level name is required'),
@@ -66,14 +50,24 @@ export default function JurisdictionLevelPage() {
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
 
+  const [searchInput, setSearchInput] = React.useState('')
+  const search = useDebounce(searchInput, 400)
+
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
-  const totalPages = Math.ceil(mockData.length / pageSize)
 
-  const paginatedData = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    return mockData.slice(startIndex, startIndex + pageSize)
-  }, [currentPage, pageSize])
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  const { data, isLoading } = useJurisdictionLevels({
+    page: currentPage,
+    pageSize,
+    search: search || undefined,
+  })
+
+  const paginatedData = data?.results ?? []
+  const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -143,25 +137,37 @@ export default function JurisdictionLevelPage() {
             Manage jurisdiction levels such as Country, State, and Local.
           </p>
         </div>
-        <Button
-          className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-          onClick={() => openDrawer('create')}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Level
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Input
+              placeholder="Search..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-56"
+              prefixIcon={<Search />}
+            />
+          </div>
+          <Button
+            className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
+            onClick={() => openDrawer('create')}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Level
+          </Button>
+        </div>
       </div>
 
       <CommonTable
         columns={columns}
         data={paginatedData}
         emptyMessage="No jurisdiction levels found"
+        isLoading={isLoading}
         pagination={{
           currentPage,
           totalPages,
           onPageChange: setCurrentPage,
           onPageSizeChange: handlePageSizeChange,
           pageSize,
-          totalItems: mockData.length,
+          totalItems: data?.count ?? 0,
         }}
       />
 

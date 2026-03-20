@@ -8,7 +8,7 @@ import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { InputDatePicker } from '@/components/date-picker/date-picker'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import FormController from '@/components/form/FormController'
@@ -23,94 +23,9 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { useColumnJurisdiction } from './hooks/useColumnJurisdiction'
+import { useJurisdictions } from './hooks/useJurisdictions'
 import { Jurisdiction, JurisdictionLevel } from '@/types/jurisdictions'
-
-const mockData: Jurisdiction[] = [
-  {
-    id: '1',
-    name: 'Alabama',
-    level: 'State',
-    dueDate: '2026-04-20',
-    dueDateTime: '17:00',
-  },
-  {
-    id: '2',
-    name: 'California',
-    level: 'State',
-    dueDate: '2026-04-30',
-    dueDateTime: '23:59',
-  },
-  {
-    id: '3',
-    name: 'United States',
-    level: 'Country',
-    dueDate: '2026-04-15',
-    dueDateTime: '12:00',
-  },
-  {
-    id: '4',
-    name: 'Los Angeles',
-    level: 'Local',
-    dueDate: '2026-05-10',
-    dueDateTime: '18:00',
-  },
-  {
-    id: '5',
-    name: 'Texas',
-    level: 'State',
-    dueDate: '2026-05-20',
-    dueDateTime: '17:00',
-  },
-  {
-    id: '6',
-    name: 'New York',
-    level: 'State',
-    dueDate: '2026-05-30',
-    dueDateTime: '23:59',
-  },
-  {
-    id: '7',
-    name: 'Chicago',
-    level: 'Local',
-    dueDate: '2026-06-15',
-    dueDateTime: '16:00',
-  },
-  {
-    id: '8',
-    name: 'Canada',
-    level: 'Country',
-    dueDate: '2026-06-30',
-    dueDateTime: '23:59',
-  },
-  {
-    id: '9',
-    name: 'Florida',
-    level: 'State',
-    dueDate: '2026-07-20',
-    dueDateTime: '17:00',
-  },
-  {
-    id: '10',
-    name: 'Seattle',
-    level: 'Local',
-    dueDate: '2026-07-31',
-    dueDateTime: '23:59',
-  },
-  {
-    id: '11',
-    name: 'Georgia',
-    level: 'State',
-    dueDate: '2026-08-20',
-    dueDateTime: '17:00',
-  },
-  {
-    id: '12',
-    name: 'Ohio',
-    level: 'State',
-    dueDate: '2026-08-30',
-    dueDateTime: '23:59',
-  },
-]
+import { useDebounce } from '@/hooks/useDebounce'
 
 const LEVEL_OPTIONS: JurisdictionLevel[] = ['Country', 'State', 'Local']
 
@@ -144,14 +59,24 @@ export default function JurisdictionsPage() {
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
 
+  const [searchInput, setSearchInput] = React.useState('')
+  const search = useDebounce(searchInput, 400)
+
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
-  const totalPages = Math.ceil(mockData.length / pageSize)
 
-  const paginatedData = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    return mockData.slice(startIndex, startIndex + pageSize)
-  }, [currentPage, pageSize])
+  React.useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  const { data, isLoading } = useJurisdictions({
+    page: currentPage,
+    pageSize,
+    search: search || undefined,
+  })
+
+  const paginatedData = data?.results ?? []
+  const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -228,25 +153,37 @@ export default function JurisdictionsPage() {
             Manage jurisdictions including Countries, States, and Localities.
           </p>
         </div>
-        <Button
-          className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-          onClick={() => openDrawer('create')}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Jurisdiction
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Input
+              placeholder="Search..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-56"
+              prefixIcon={<Search />}
+            />
+          </div>
+          <Button
+            className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
+            onClick={() => openDrawer('create')}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Jurisdiction
+          </Button>
+        </div>
       </div>
 
       <CommonTable
         columns={columns}
         data={paginatedData}
         emptyMessage="No jurisdictions found"
+        isLoading={isLoading}
         pagination={{
           currentPage,
           totalPages,
           onPageChange: setCurrentPage,
           onPageSizeChange: handlePageSizeChange,
           pageSize,
-          totalItems: mockData.length,
+          totalItems: data?.count ?? 0,
         }}
       />
 
