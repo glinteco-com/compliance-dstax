@@ -10,9 +10,11 @@ export default function AuthLayout({
 }) {
   return (
     <MainLayout>
-      <div className="flex h-screen flex-col">
+      <div className="flex h-screen flex-col overflow-hidden">
         <MainHeader />
-        <div className="p-4 lg:p-6">{children}</div>
+        <div className="text-foreground flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-4 lg:p-6">
+          {children}
+        </div>
       </div>
     </MainLayout>
   )
