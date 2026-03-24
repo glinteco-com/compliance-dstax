@@ -1,12 +1,24 @@
-import { fetchTaxTypes } from '@/api/master-data-api'
-import { TaxTypeParams } from '@/types/tax-type'
-import { useQuery } from '@tanstack/react-query'
+import { useApiTaxComplianceTaxTypeList } from '@/api/generated/tax-compliance-tax-type/tax-compliance-tax-type'
+import { ApiTaxComplianceTaxTypeListParams } from '@/models/apiTaxComplianceTaxTypeListParams'
+import { TaxType } from '@/models/taxType'
 
-export const useTaxTypes = (params: TaxTypeParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['tax-types', params],
-    queryFn: () => fetchTaxTypes(params),
-  })
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  return { data, ...rest }
+export const useTaxTypes = (params: PaginationParams) => {
+  const apiParams: ApiTaxComplianceTaxTypeListParams = {
+    name__icontains: params.search,
+  }
+  const { data, ...rest } = useApiTaxComplianceTaxTypeList({
+    ...apiParams,
+    limit: params.pageSize,
+    offset: (params.page - 1) * params.pageSize,
+  } as any)
+
+  const paginatedData = data as unknown as { count: number; results: TaxType[] }
+
+  return { data: paginatedData, ...rest }
 }

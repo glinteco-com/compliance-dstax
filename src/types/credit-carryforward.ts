@@ -7,3 +7,12 @@ export interface CreditCarryforward {
   currentPeriod: number
   endingBalance: number
 }
+
+export interface CreditCarryforwardParams {
+  page: number
+  pageSize: number
+  search?: string
+  client?: string
+  legalEntity?: string
+  jurisdiction?: string
+}

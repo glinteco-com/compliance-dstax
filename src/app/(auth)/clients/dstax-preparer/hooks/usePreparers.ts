@@ -1,12 +1,10 @@
-import { fetchPreparers } from '@/api/clients-api'
+import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
 import { PreparerParams } from '@/types/dstax-preparer'
-import { useQuery } from '@tanstack/react-query'
 
 export const usePreparers = (params: PreparerParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['dstax-preparers', params],
-    queryFn: () => fetchPreparers(params),
-  })
+  const { data, ...rest } = useApiCoreClientList(params as any)
 
-  return { data, ...rest }
+  const paginatedData = data as unknown as { count: number; results: any[] }
+
+  return { data: paginatedData, ...rest }
 }

@@ -1,12 +1,10 @@
-import { fetchUsers } from '@/api/clients-api'
+import { useApiCoreUserList } from '@/api/generated/core-user/core-user'
 import { UserParams } from '@/types/user'
-import { useQuery } from '@tanstack/react-query'
 
 export const useUsers = (params: UserParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['users', params],
-    queryFn: () => fetchUsers(params),
-  })
+  const { data, ...rest } = useApiCoreUserList(params as any)
 
-  return { data, ...rest }
+  const paginatedData = data as unknown as { count: number; results: any[] }
+
+  return { data: paginatedData, ...rest }
 }

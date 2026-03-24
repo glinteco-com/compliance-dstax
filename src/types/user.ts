@@ -1,9 +1,3 @@
-export interface UserParams {
-  page: number
-  pageSize: number
-  search?: string
-}
-
 export interface User {
   id: string
   clientName: string
@@ -11,4 +5,10 @@ export interface User {
   username: string
   password?: string
   role: string
+}
+
+export interface UserParams {
+  page: number
+  pageSize: number
+  search?: string
 }

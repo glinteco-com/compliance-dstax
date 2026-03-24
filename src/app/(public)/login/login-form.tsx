@@ -5,12 +5,12 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password'
 import FormController from '@/components/form/FormController'
 import { Mail } from 'lucide-react'
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -20,7 +20,6 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 export function LoginForm() {
-  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { signInMutation } = useAuth()
 
@@ -33,23 +32,31 @@ export function LoginForm() {
   })
 
   const onSubmit = (data: LoginFormValues) => {
-    setError(null)
-    signInMutation.mutate(data, {
-      onSuccess: () => {
-        router.push('/')
-        router.refresh()
-      },
-      onError: (err: any) => {
-        console.error('Login failed:', err)
-        const errorMessage =
-          err.response?.data || err.message || 'An unexpected error occurred'
-        setError(
-          typeof errorMessage === 'string'
-            ? errorMessage
-            : 'Invalid credentials'
-        )
-      },
-    })
+    signInMutation.mutate(
+      { data },
+      {
+        onSuccess: () => {
+          router.push('/')
+          router.refresh()
+        },
+        onError: (err: any) => {
+          console.error('Login failed:', err)
+          const dataError = err.response?.data
+          const errorMessage =
+            dataError?.errors?.detail ||
+            dataError?.detail ||
+            (typeof dataError === 'string' ? dataError : null) ||
+            err.message ||
+            'An unexpected error occurred'
+
+          toast.error(
+            typeof errorMessage === 'string'
+              ? errorMessage
+              : 'Invalid credentials'
+          )
+        },
+      }
+    )
   }
 
   return (
@@ -79,12 +86,6 @@ export function LoginForm() {
         <span className="text-brand-gray-500 mt-1 text-[10px]">Consulting</span>
       </div>
 
-      {error && (
-        <div className="mb-4 w-full border border-red-200 bg-red-50 p-3 text-center text-sm text-red-600">
-          {error}
-        </div>
-      )}
-
       <form className="w-full space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <FormController
           control={control}
@@ -95,7 +96,7 @@ export function LoginForm() {
             type: 'email',
             placeholder: 'name@mail.com',
             className:
-              'rounded-none border-gray-300 focus-visible:ring-1 focus-visible:ring-gray-400',
+              'border-gray-300 focus-visible:ring-1 focus-visible:ring-gray-400',
             prefixIcon: <Mail />,
           }}
         />
@@ -108,14 +109,14 @@ export function LoginForm() {
             label: 'Password',
             placeholder: 'Password',
             className:
-              'rounded-none border-gray-300 focus-visible:ring-1 focus-visible:ring-gray-400',
+              'border-gray-300 focus-visible:ring-1 focus-visible:ring-gray-400',
           }}
         />
 
         <Button
           type="submit"
           isLoading={signInMutation.isPending}
-          className="bg-brand-orange-500 hover:bg-brand-orange-600 mt-6 h-10 w-full rounded-none text-white"
+          className="bg-brand-orange-500 hover:bg-brand-orange-600 mt-6 h-10 w-full text-white"
         >
           Login
         </Button>

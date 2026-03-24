@@ -12,7 +12,7 @@ import { getCookie } from 'cookies-next'
  * Base URL is pulled from environment variables or defaults to /api.
  */
 const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL}` || '/api',
   headers: {
     'Content-Type': 'application/json',
   },

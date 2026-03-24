@@ -21,7 +21,6 @@ import FormController from '@/components/form/FormController'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Ticket as TicketType } from '@/types/support-ticket'
 import {
   useSupportTickets,
   useCreateTicket,
@@ -32,6 +31,7 @@ import { useColumnSupportTicket } from './hooks/useColumnSupportTicket'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useDebounce } from '@/hooks/useDebounce'
+import { Ticket } from '@/types/support-ticket'
 
 const ticketSchema = z.object({
   name: z.string().min(1, 'Ticket name is required'),
@@ -62,9 +62,7 @@ export default function SupportTicketsPage() {
   const [drawerMode, setDrawerMode] = React.useState<
     'create' | 'edit' | 'view'
   >('create')
-  const [selectedItem, setSelectedItem] = React.useState<TicketType | null>(
-    null
-  )
+  const [selectedItem, setSelectedItem] = React.useState<Ticket | null>(null)
 
   const {
     control,
@@ -90,7 +88,7 @@ export default function SupportTicketsPage() {
 
   const openDrawer = (
     mode: 'create' | 'edit' | 'view',
-    item: TicketType | null = null
+    item: Ticket | null = null
   ) => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()

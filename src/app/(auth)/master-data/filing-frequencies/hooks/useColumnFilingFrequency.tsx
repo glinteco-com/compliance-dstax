@@ -4,7 +4,7 @@ import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { FilingFrequency } from '@/types/filing-frequency'
+import { FilingFrequency } from '@/models/filingFrequency'
 
 interface UseColumnFilingFrequencyProps {
   onDelete: (id: string) => void
@@ -15,30 +15,19 @@ export const useColumnFilingFrequency = ({
 }: UseColumnFilingFrequencyProps) => {
   const columns: Column<FilingFrequency>[] = [
     {
-      id: 'type',
-      label: 'Type',
+      id: 'id',
+      label: 'ID',
       width: 100,
       render: (item) => (
+        <span className="font-mono text-xs text-zinc-500">{item.id}</span>
+      ),
+    },
+    {
+      id: 'code',
+      label: 'Code',
+      render: (item) => (
         <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          {item.type}
-        </span>
-      ),
-    },
-    {
-      id: 'description',
-      label: 'Description',
-      render: (item) => (
-        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-          {item.description}
-        </span>
-      ),
-    },
-    {
-      id: 'createdAt',
-      label: 'Created At',
-      render: (item) => (
-        <span className="text-zinc-500 dark:text-zinc-400">
-          {item.createdAt}
+          {item.code}
         </span>
       ),
     },
@@ -54,7 +43,7 @@ export const useColumnFilingFrequency = ({
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-red-500 hover:text-red-600"
-              onClick={() => onDelete(item.id)}
+              onClick={() => onDelete(String(item.id))}
             >
               <Trash2 className="h-4 w-4" />
               <span className="sr-only">Delete</span>

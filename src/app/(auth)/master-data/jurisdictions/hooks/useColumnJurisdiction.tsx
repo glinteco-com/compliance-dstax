@@ -4,7 +4,7 @@ import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Edit2, Trash2, Eye } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { Jurisdiction } from '@/types/jurisdictions'
+import { Jurisdiction } from '@/models/jurisdiction'
 
 interface UseColumnJurisdictionProps {
   onView: (item: Jurisdiction) => void
@@ -32,7 +32,7 @@ export const useColumnJurisdiction = ({
       label: 'Level',
       render: (item) => (
         <span className="text-zinc-700 capitalize dark:text-zinc-300">
-          {item.level}
+          {item.level_name}
         </span>
       ),
     },
@@ -40,7 +40,9 @@ export const useColumnJurisdiction = ({
       id: 'dueDate',
       label: 'Due Date',
       render: (item) => (
-        <span className="text-zinc-700 dark:text-zinc-300">{item.dueDate}</span>
+        <span className="text-zinc-700 dark:text-zinc-300">
+          {item.due_date_time?.split('T')[0] || '-'}
+        </span>
       ),
     },
     {
@@ -48,7 +50,7 @@ export const useColumnJurisdiction = ({
       label: 'Due Date Time',
       render: (item) => (
         <span className="text-zinc-700 dark:text-zinc-300">
-          {item.dueDateTime}
+          {item.due_date_time?.split('T')[1]?.substring(0, 5) || '-'}
         </span>
       ),
     },
@@ -86,7 +88,7 @@ export const useColumnJurisdiction = ({
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-red-500 hover:text-red-600"
-              onClick={() => onDelete(item.id)}
+              onClick={() => onDelete(String(item.id))}
             >
               <Trash2 className="h-4 w-4" />
               <span className="sr-only">Delete</span>

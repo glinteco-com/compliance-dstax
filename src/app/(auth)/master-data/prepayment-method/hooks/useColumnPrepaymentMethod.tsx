@@ -4,7 +4,7 @@ import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { PrepaymentMethod } from '@/types/prepayment-method'
+import { PrepaymentMethod } from '@/models/prepaymentMethod'
 
 interface UseColumnPrepaymentMethodProps {
   onDelete: (id: string) => void
@@ -20,15 +20,17 @@ export const useColumnPrepaymentMethod = ({
       width: 100,
       render: (item) => (
         <span className="font-semibold text-zinc-900 uppercase dark:text-zinc-100">
-          {item.state}
+          {item.jurisdiction?.name || ''}
         </span>
       ),
     },
     {
-      id: 'method',
+      id: 'method_description',
       label: 'Prepayment Method',
       render: (item) => (
-        <span className="text-zinc-700 dark:text-zinc-300">{item.method}</span>
+        <span className="text-zinc-700 dark:text-zinc-300">
+          {item.method_description}
+        </span>
       ),
     },
     {
@@ -43,7 +45,7 @@ export const useColumnPrepaymentMethod = ({
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-red-500 hover:text-red-600"
-              onClick={() => onDelete(item.id)}
+              onClick={() => onDelete(String(item.id))}
             >
               <Trash2 className="h-4 w-4" />
               <span className="sr-only">Delete</span>

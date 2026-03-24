@@ -24,7 +24,8 @@ import {
 } from '@/components/ui/drawer'
 import { useColumnJurisdiction } from './hooks/useColumnJurisdiction'
 import { useJurisdictions } from './hooks/useJurisdictions'
-import { Jurisdiction, JurisdictionLevel } from '@/types/jurisdictions'
+import { Jurisdiction } from '@/models/jurisdiction'
+type JurisdictionLevel = 'Country' | 'State' | 'Local'
 import { useDebounce } from '@/hooks/useDebounce'
 
 const LEVEL_OPTIONS: JurisdictionLevel[] = ['Country', 'State', 'Local']
@@ -106,9 +107,9 @@ export default function JurisdictionsPage() {
     if (mode === 'edit' && item) {
       reset({
         name: item.name,
-        level: item.level,
-        dueDate: item.dueDate,
-        dueDateTime: item.dueDateTime,
+        level: item.level_name as any,
+        dueDate: item.due_date_time?.split('T')[0] || '',
+        dueDateTime: item.due_date_time?.split('T')[1]?.substring(0, 5) || '',
       })
     } else if (mode === 'create') {
       reset({ name: '', level: undefined, dueDate: '', dueDateTime: '' })
@@ -226,7 +227,7 @@ export default function JurisdictionsPage() {
                     Level
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-400">
-                    {selectedItem.level}
+                    {selectedItem.level_name}
                   </span>
                 </div>
                 <div className="grid gap-1">
@@ -234,7 +235,7 @@ export default function JurisdictionsPage() {
                     Due Date
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-400">
-                    {selectedItem.dueDate}
+                    {selectedItem.due_date_time?.split('T')[0] || '-'}
                   </span>
                 </div>
                 <div className="grid gap-1">
@@ -242,7 +243,9 @@ export default function JurisdictionsPage() {
                     Due Date Time
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-400">
-                    {selectedItem.dueDateTime}
+                    {selectedItem.due_date_time
+                      ?.split('T')[1]
+                      ?.substring(0, 5) || '-'}
                   </span>
                 </div>
               </div>

@@ -1,12 +1,29 @@
-import { fetchFilingFrequencies } from '@/api/master-data-api'
-import { FilingFrequencyParams } from '@/types/filing-frequency'
-import { useQuery } from '@tanstack/react-query'
+import { useApiTaxComplianceFilingFrequencyList } from '@/api/generated/tax-compliance-filing-frequency/tax-compliance-filing-frequency'
+import { ApiTaxComplianceFilingFrequencyListParams } from '@/models/apiTaxComplianceFilingFrequencyListParams'
+import { FilingFrequency } from '@/models/filingFrequency'
 
-export const useFilingFrequencies = (params: FilingFrequencyParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['filing-frequencies', params],
-    queryFn: () => fetchFilingFrequencies(params),
-  })
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  return { data, ...rest }
+export const useFilingFrequencies = (params: PaginationParams) => {
+  const apiParams: ApiTaxComplianceFilingFrequencyListParams = {
+    // If limit/offset aren't openly exposed in model, orval sometimes ignores them. But since DRF uses them, we might be okay. Wait, if they're not in the model, they'll throw a TS error. But we can cast it as any if needed.
+    // The previous structure in filing frequencies params:
+  }
+  const { data, ...rest } = useApiTaxComplianceFilingFrequencyList({
+    ...apiParams,
+    limit: params.pageSize,
+    offset: (params.page - 1) * params.pageSize,
+    code__icontains: params.search,
+  } as any)
+
+  const paginatedData = data as unknown as {
+    count: number
+    results: FilingFrequency[]
+  }
+
+  return { data: paginatedData, ...rest }
 }

@@ -2,8 +2,8 @@ import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Eye, Pencil, Trash2 } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { Ticket } from '@/types/support-ticket'
 import { cn } from '@/lib/utils'
+import { Ticket } from '@/types/support-ticket'
 
 interface UseColumnSupportTicketProps {
   onView: (item: Ticket) => void
