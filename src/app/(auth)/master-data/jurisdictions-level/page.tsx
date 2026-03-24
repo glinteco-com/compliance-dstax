@@ -22,7 +22,11 @@ import {
 } from '@/components/ui/drawer'
 import { useColumnJurisdictionLevel } from './hooks/useColumnJurisdictionLevel'
 import { useJurisdictionLevels } from './hooks/useJurisdictionLevels'
-import { JurisdictionLevel } from '@/types/jurisdiction-level'
+import { JurisdictionLevel as GeneratedJurisdictionLevel } from '@/models/jurisdictionLevel'
+
+export type JurisdictionLevel = GeneratedJurisdictionLevel & {
+  description?: string
+}
 import { useDebounce } from '@/hooks/useDebounce'
 
 const formSchema = z.object({

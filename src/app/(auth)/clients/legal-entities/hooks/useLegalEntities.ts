@@ -1,15 +1,13 @@
-import { fetchLegalEntities } from '@/api/clients-api'
+import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
 import { LegalEntityParams } from '@/types/legal-entity'
-import { useQuery } from '@tanstack/react-query'
 
 export const useLegalEntities = (params: LegalEntityParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['legal-entities', params],
-    queryFn: () => fetchLegalEntities(params),
-  })
+  const { data, ...rest } = useApiCoreLegalEntityList(params as any)
+
+  const paginatedData = data as unknown as { count: number; results: any[] }
 
   return {
-    data,
+    data: paginatedData,
     ...rest,
   }
 }

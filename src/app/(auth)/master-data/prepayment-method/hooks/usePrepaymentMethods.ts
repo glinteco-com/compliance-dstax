@@ -1,12 +1,27 @@
-import { fetchPrepaymentMethods } from '@/api/master-data-api'
-import { PrepaymentMethodParams } from '@/types/prepayment-method'
-import { useQuery } from '@tanstack/react-query'
+import { useApiTaxCompliancePrepaymentMethodsList } from '@/api/generated/tax-compliance-prepayment-method/tax-compliance-prepayment-method'
+import { ApiTaxCompliancePrepaymentMethodsListParams } from '@/models/apiTaxCompliancePrepaymentMethodsListParams'
+import { PrepaymentMethod } from '@/models/prepaymentMethod'
 
-export const usePrepaymentMethods = (params: PrepaymentMethodParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['prepayment-methods', params],
-    queryFn: () => fetchPrepaymentMethods(params),
-  })
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  return { data, ...rest }
+export const usePrepaymentMethods = (params: PaginationParams) => {
+  const apiParams: ApiTaxCompliancePrepaymentMethodsListParams = {
+    method_description__icontains: params.search,
+  }
+  const { data, ...rest } = useApiTaxCompliancePrepaymentMethodsList({
+    ...apiParams,
+    limit: params.pageSize,
+    offset: (params.page - 1) * params.pageSize,
+  } as any)
+
+  const paginatedData = data as unknown as {
+    count: number
+    results: PrepaymentMethod[]
+  }
+
+  return { data: paginatedData, ...rest }
 }

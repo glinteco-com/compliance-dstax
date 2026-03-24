@@ -1,12 +1,27 @@
-import { fetchJurisdictionLevels } from '@/api/master-data-api'
-import { JurisdictionLevelParams } from '@/types/jurisdiction-level'
-import { useQuery } from '@tanstack/react-query'
+import { useApiTaxComplianceJurisdictionLevelList } from '@/api/generated/tax-compliance-jurisdiction-level/tax-compliance-jurisdiction-level'
+import { ApiTaxComplianceJurisdictionLevelListParams } from '@/models/apiTaxComplianceJurisdictionLevelListParams'
+import { JurisdictionLevel } from '@/models/jurisdictionLevel'
 
-export const useJurisdictionLevels = (params: JurisdictionLevelParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['jurisdiction-levels', params],
-    queryFn: () => fetchJurisdictionLevels(params),
-  })
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  return { data, ...rest }
+export const useJurisdictionLevels = (params: PaginationParams) => {
+  const apiParams: ApiTaxComplianceJurisdictionLevelListParams = {
+    name__icontains: params.search,
+  }
+  const { data, ...rest } = useApiTaxComplianceJurisdictionLevelList({
+    ...apiParams,
+    limit: params.pageSize,
+    offset: (params.page - 1) * params.pageSize,
+  } as any)
+
+  const paginatedData = data as unknown as {
+    count: number
+    results: JurisdictionLevel[]
+  }
+
+  return { data: paginatedData, ...rest }
 }

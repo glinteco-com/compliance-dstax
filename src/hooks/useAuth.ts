@@ -3,6 +3,11 @@ import apiClient from '@/api/api-client'
 import { Cookies } from '@/lib/cookies'
 
 import { authClient } from '@/lib/auth/auth-client'
+import {
+  useApiCoreAuthLoginCreate,
+  apiCoreAuthLogoutCreate,
+} from '@/api/generated/auth/auth'
+import { useApiTokenRefreshCreate } from '@/api/generated/api/api'
 
 /**
  * Hook for authentication-related operations using React Query and Axios.
@@ -13,19 +18,17 @@ export const useAuth = () => {
   /**
    * Mutation for signing in
    */
-  const signInMutation = useMutation({
-    mutationFn: async (credentials: any) => {
-      const { data } = await apiClient.post('/login', credentials)
-      return data
-    },
-    onSuccess: (data) => {
-      if (data.token) {
-        Cookies.set('token', data.token)
-      }
-      if (data.refreshToken) {
-        Cookies.set('refreshToken', data.refreshToken)
-      }
-      queryClient.invalidateQueries({ queryKey: ['session'] })
+  const signInMutation = useApiCoreAuthLoginCreate({
+    mutation: {
+      onSuccess: (data) => {
+        if (data.access) {
+          Cookies.set('token', data.access)
+        }
+        if (data.refresh) {
+          Cookies.set('refreshToken', data.refresh)
+        }
+        queryClient.invalidateQueries({ queryKey: ['session'] })
+      },
     },
   })
 
@@ -38,7 +41,12 @@ export const useAuth = () => {
       await authClient.signOut()
 
       // 2. Clear custom HttpOnly cookies via API
-      await apiClient.post('/logout')
+      const refresh = ((await Cookies.get('refreshToken')) as string) || ''
+      try {
+        await apiCoreAuthLogoutCreate({ refresh })
+      } catch (err) {
+        console.error('Logout API failed:', err)
+      }
 
       // 3. Clear any remaining client-side cookies
       Cookies.remove('token')
@@ -70,21 +78,17 @@ export const useAuth = () => {
   /**
    * Mutation for exchanging/refreshing tokens
    */
-  const exchangeTokenMutation = useMutation({
-    mutationFn: async (refreshToken: string) => {
-      const { data } = await apiClient.post('/auth/token/exchange', {
-        refreshToken,
-      })
-      return data
-    },
-    onSuccess: (data) => {
-      if (data.token) {
-        Cookies.set('token', data.token)
-      }
-      if (data.refreshToken) {
-        Cookies.set('refreshToken', data.refreshToken)
-      }
-      queryClient.invalidateQueries({ queryKey: ['session'] })
+  const exchangeTokenMutation = useApiTokenRefreshCreate({
+    mutation: {
+      onSuccess: (data) => {
+        if (data.access) {
+          Cookies.set('token', data.access)
+        }
+        if (data.refresh) {
+          Cookies.set('refreshToken', data.refresh)
+        }
+        queryClient.invalidateQueries({ queryKey: ['session'] })
+      },
     },
   })
 

@@ -1,12 +1,27 @@
-import { fetchFilingTypes } from '@/api/master-data-api'
-import { FilingTypeParams } from '@/types/filing-type'
-import { useQuery } from '@tanstack/react-query'
+import { useApiTaxComplianceFilingTypeList } from '@/api/generated/tax-compliance-filing-type/tax-compliance-filing-type'
+import { ApiTaxComplianceFilingTypeListParams } from '@/models/apiTaxComplianceFilingTypeListParams'
+import { FilingType } from '@/models/filingType'
 
-export const useFilingTypes = (params: FilingTypeParams) => {
-  const { data, ...rest } = useQuery({
-    queryKey: ['filing-types', params],
-    queryFn: () => fetchFilingTypes(params),
-  })
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  return { data, ...rest }
+export const useFilingTypes = (params: PaginationParams) => {
+  const apiParams: ApiTaxComplianceFilingTypeListParams = {
+    name__icontains: params.search,
+  }
+  const { data, ...rest } = useApiTaxComplianceFilingTypeList({
+    ...apiParams,
+    limit: params.pageSize,
+    offset: (params.page - 1) * params.pageSize,
+  } as any)
+
+  const paginatedData = data as unknown as {
+    count: number
+    results: FilingType[]
+  }
+
+  return { data: paginatedData, ...rest }
 }
