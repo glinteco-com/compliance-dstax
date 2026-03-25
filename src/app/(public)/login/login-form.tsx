@@ -63,9 +63,9 @@ export function LoginForm() {
     <div className="mx-auto flex w-full max-w-sm flex-col items-center bg-white p-8 shadow-lg">
       {/* Logo Placeholder */}
       <div className="mb-8 flex flex-col items-center">
-        <div className="bg-brand-navy-500 flex h-[60px] w-[60px] text-xs font-bold text-white">
+        <div className="bg-brand-navy-500 flex h-15 w-15 text-xs font-bold text-white">
           <div className="relative flex h-full w-full flex-1 flex-col">
-            <div className="flex h-full w-full text-[10px] leading-[10px]">
+            <div className="flex h-full w-full text-[10px] leading-2.5">
               <div className="border-brand-gray-500/30 flex flex-1 flex-col items-center justify-around border-r">
                 <span>D</span>
                 <span></span>

@@ -21,6 +21,7 @@ import type {
 import type {
   ApiTaxComplianceFilingFrequencyListParams,
   FilingFrequency,
+  PaginatedFilingFrequencyList,
   PatchedFilingFrequency,
 } from '../../../models'
 
@@ -59,7 +60,7 @@ export const apiTaxComplianceFilingFrequencyList = (
   params?: ApiTaxComplianceFilingFrequencyListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<FilingFrequency[]>({
+  return customInstance<PaginatedFilingFrequencyList>({
     url: `/api/tax_compliance/filing_frequency/`,
     method: 'GET',
     params,

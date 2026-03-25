@@ -72,11 +72,13 @@ const CommonSelect = React.forwardRef<HTMLButtonElement, CommonSelectProps>(
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
+            {options
+              .filter((option) => option.value != null && option.value !== '')
+              .map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
         {error && (

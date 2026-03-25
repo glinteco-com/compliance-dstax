@@ -1,10 +1,19 @@
 import { useApiCoreUserList } from '@/api/generated/core-user/core-user'
-import { UserParams } from '@/types/user'
+import { ApiCoreUserListParams } from '@/models/apiCoreUserListParams'
+import { PaginatedUserList } from '@/models/paginatedUserList'
 
-export const useUsers = (params: UserParams) => {
-  const { data, ...rest } = useApiCoreUserList(params as any)
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  const paginatedData = data as unknown as { count: number; results: any[] }
+export const useUsers = (params: PaginationParams) => {
+  const apiParams: ApiCoreUserListParams = {
+    page: params.page,
+    page_size: params.pageSize,
+  }
+  const { data, ...rest } = useApiCoreUserList(apiParams)
 
-  return { data: paginatedData, ...rest }
+  return { data: data as unknown as PaginatedUserList, ...rest }
 }

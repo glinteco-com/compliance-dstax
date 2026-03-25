@@ -1,6 +1,6 @@
 import { useApiTaxComplianceJurisdictionLevelList } from '@/api/generated/tax-compliance-jurisdiction-level/tax-compliance-jurisdiction-level'
 import { ApiTaxComplianceJurisdictionLevelListParams } from '@/models/apiTaxComplianceJurisdictionLevelListParams'
-import { JurisdictionLevel } from '@/models/jurisdictionLevel'
+import { PaginatedJurisdictionLevelList } from '@/models/paginatedJurisdictionLevelList'
 
 interface PaginationParams {
   page: number
@@ -11,17 +11,13 @@ interface PaginationParams {
 export const useJurisdictionLevels = (params: PaginationParams) => {
   const apiParams: ApiTaxComplianceJurisdictionLevelListParams = {
     name__icontains: params.search,
+    page: params.page,
+    page_size: params.pageSize,
   }
-  const { data, ...rest } = useApiTaxComplianceJurisdictionLevelList({
-    ...apiParams,
-    limit: params.pageSize,
-    offset: (params.page - 1) * params.pageSize,
-  } as any)
+  const { data, ...rest } = useApiTaxComplianceJurisdictionLevelList(apiParams)
 
-  const paginatedData = data as unknown as {
-    count: number
-    results: JurisdictionLevel[]
+  return {
+    data: data as unknown as PaginatedJurisdictionLevelList,
+    ...rest,
   }
-
-  return { data: paginatedData, ...rest }
 }

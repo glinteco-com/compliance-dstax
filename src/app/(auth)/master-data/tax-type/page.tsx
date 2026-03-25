@@ -4,6 +4,8 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,18 +25,32 @@ import {
 import { useColumnTaxType } from './hooks/useColumnTaxType'
 import { useTaxTypes } from './hooks/useTaxTypes'
 import { useDebounce } from '@/hooks/useDebounce'
+import {
+  useApiTaxComplianceTaxTypeCreate,
+  useApiTaxComplianceTaxTypeUpdate,
+  useApiTaxComplianceTaxTypeDestroy,
+  getApiTaxComplianceTaxTypeListQueryKey,
+} from '@/api/generated/tax-compliance-tax-type/tax-compliance-tax-type'
+import { TaxType } from '@/models/taxType'
 
 const formSchema = z.object({
-  type: z.string().min(1, 'Type is required'),
-  description: z.string().min(1, 'Description is required'),
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(100, 'Must be 100 characters or less'),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function TaxTypePage() {
-  const [isDeleting, setIsDeleting] = React.useState(false)
-  const [targetId, setTargetId] = React.useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const [targetId, setTargetId] = React.useState<number | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] = React.useState<TaxType | null>(null)
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -67,44 +83,109 @@ export default function TaxTypePage() {
     setCurrentPage(1)
   }
 
+  const invalidateList = () => {
+    queryClient.invalidateQueries({
+      queryKey: getApiTaxComplianceTaxTypeListQueryKey(),
+    })
+  }
+
+  const { mutate: createTaxType, isPending: isCreating } =
+    useApiTaxComplianceTaxTypeCreate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Tax type created successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to create tax type.')
+        },
+      },
+    })
+
+  const { mutate: updateTaxType, isPending: isUpdating } =
+    useApiTaxComplianceTaxTypeUpdate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Tax type updated successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to update tax type.')
+        },
+      },
+    })
+
+  const { mutate: deleteTaxType, isPending: isDeleting } =
+    useApiTaxComplianceTaxTypeDestroy({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Tax type deleted successfully.')
+          invalidateList()
+          onCloseDeleteDialog()
+        },
+        onError: () => {
+          toast.error('Failed to delete tax type.')
+        },
+      },
+    })
+
   const { control, reset, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { type: '', description: '' },
+    defaultValues: { name: '' },
   })
 
-  const openDrawer = () => {
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: TaxType | null = null
+  ) => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-    reset({ type: '', description: '' })
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({ name: item.name })
+    } else if (mode === 'create') {
+      reset({ name: '' })
+    }
+
     setIsDrawerOpen(true)
   }
 
-  const onSubmit = (data: FormValues) => {
-    console.log('New tax type:', data)
-    setIsDrawerOpen(false)
+  const onSubmit = (formData: FormValues) => {
+    if (drawerMode === 'create') {
+      createTaxType({
+        data: { name: formData.name } as any,
+      })
+    } else if (drawerMode === 'edit' && selectedItem) {
+      updateTaxType({
+        id: selectedItem.id,
+        data: { name: formData.name } as any,
+      })
+    }
   }
 
   const handleDelete = (id: string) => {
-    setTargetId(id)
+    setTargetId(Number(id))
     onOpenDeleteDialog()
   }
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!targetId) return
-    setIsDeleting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log(`Tax Type ${targetId} has been deleted.`)
-    setIsDeleting(false)
-    onCloseDeleteDialog()
+    deleteTaxType({ id: targetId })
   }
 
   const { columns } = useColumnTaxType({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
   })
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -126,7 +207,7 @@ export default function TaxTypePage() {
           </div>
           <Button
             className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-            onClick={openDrawer}
+            onClick={() => openDrawer('create')}
           >
             <Plus className="mr-2 h-4 w-4" /> Add Tax Type
           </Button>
@@ -148,7 +229,7 @@ export default function TaxTypePage() {
         }}
       />
 
-      {/* Create Drawer */}
+      {/* Drawer */}
       <Drawer
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
@@ -156,45 +237,74 @@ export default function TaxTypePage() {
       >
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>Add Tax Type</DrawerTitle>
+            <DrawerTitle>
+              {drawerMode === 'create' && 'Add Tax Type'}
+              {drawerMode === 'edit' && 'Edit Tax Type'}
+              {drawerMode === 'view' && 'Tax Type Details'}
+            </DrawerTitle>
             <DrawerDescription>
-              Enter a tax type name and its description.
+              {drawerMode === 'create' && 'Enter a tax type name.'}
+              {drawerMode === 'edit' &&
+                'Update the details of the selected tax type.'}
+              {drawerMode === 'view' && 'Details of the selected tax type.'}
             </DrawerDescription>
           </DrawerHeader>
 
           <div className="flex-1 overflow-auto p-4">
-            <form
-              id="tax-type-form"
-              onSubmit={handleSubmit(onSubmit)}
-              className="mt-2 space-y-4"
-            >
-              <FormController
-                control={control}
-                name="type"
-                Field={Input}
-                fieldProps={{
-                  label: 'Type',
-                  placeholder: 'e.g. Sales, Sellers Use, Combined',
-                }}
-              />
-              <FormController
-                control={control}
-                name="description"
-                Field={Input}
-                fieldProps={{
-                  label: 'Description',
-                  placeholder: 'e.g. General sales tax',
-                }}
-              />
-            </form>
+            {/* View mode */}
+            {drawerMode === 'view' && selectedItem && (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    ID
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.id}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Name
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.name}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Create / Edit form */}
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <form
+                id="tax-type-form"
+                onSubmit={handleSubmit(onSubmit)}
+                className="mt-2 space-y-4"
+              >
+                <FormController
+                  control={control}
+                  name="name"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Name',
+                    placeholder: 'e.g. Sales, Sellers Use, Combined',
+                  }}
+                />
+              </form>
+            )}
           </div>
 
           <DrawerFooter>
-            <Button type="submit" form="tax-type-form">
-              Save
-            </Button>
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <Button
+                type="submit"
+                form="tax-type-form"
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? 'Saving...' : 'Save'}
+              </Button>
+            )}
             <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">Close</Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>

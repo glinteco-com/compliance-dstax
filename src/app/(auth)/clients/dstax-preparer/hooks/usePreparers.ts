@@ -1,10 +1,20 @@
-import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
-import { PreparerParams } from '@/types/dstax-preparer'
+import { useApiCoreUserList } from '@/api/generated/core-user/core-user'
+import { ApiCoreUserListParams } from '@/models/apiCoreUserListParams'
+import { PaginatedUserList } from '@/models/paginatedUserList'
 
-export const usePreparers = (params: PreparerParams) => {
-  const { data, ...rest } = useApiCoreClientList(params as any)
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  const paginatedData = data as unknown as { count: number; results: any[] }
+export const usePreparers = (params: PaginationParams) => {
+  const apiParams: ApiCoreUserListParams = {
+    role: 'DSTAX_PREPARER',
+    page: params.page,
+    page_size: params.pageSize,
+  }
+  const { data, ...rest } = useApiCoreUserList(apiParams)
 
-  return { data: paginatedData, ...rest }
+  return { data: data as unknown as PaginatedUserList, ...rest }
 }

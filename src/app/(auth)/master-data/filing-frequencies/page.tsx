@@ -4,6 +4,8 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,22 +25,33 @@ import {
 import { useColumnFilingFrequency } from './hooks/useColumnFilingFrequency'
 import { useFilingFrequencies } from './hooks/useFilingFrequencies'
 import { useDebounce } from '@/hooks/useDebounce'
+import {
+  useApiTaxComplianceFilingFrequencyCreate,
+  useApiTaxComplianceFilingFrequencyUpdate,
+  useApiTaxComplianceFilingFrequencyDestroy,
+  getApiTaxComplianceFilingFrequencyListQueryKey,
+} from '@/api/generated/tax-compliance-filing-frequency/tax-compliance-filing-frequency'
+import { FilingFrequency } from '@/models/filingFrequency'
 
 const formSchema = z.object({
-  type: z
+  code: z
     .string()
-    .min(1, 'Type is required')
-    .max(5, 'Type must be 5 characters or fewer')
-    .toUpperCase(),
-  description: z.string().min(1, 'Description is required'),
+    .min(1, 'Code is required')
+    .max(20, 'Must be 20 characters or less'),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function FilingFrequenciesPage() {
-  const [isDeleting, setIsDeleting] = React.useState(false)
-  const [targetId, setTargetId] = React.useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const [targetId, setTargetId] = React.useState<number | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] =
+    React.useState<FilingFrequency | null>(null)
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -71,44 +84,109 @@ export default function FilingFrequenciesPage() {
     setCurrentPage(1)
   }
 
+  const invalidateList = () => {
+    queryClient.invalidateQueries({
+      queryKey: getApiTaxComplianceFilingFrequencyListQueryKey(),
+    })
+  }
+
+  const { mutate: createFrequency, isPending: isCreating } =
+    useApiTaxComplianceFilingFrequencyCreate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Filing frequency created successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to create filing frequency.')
+        },
+      },
+    })
+
+  const { mutate: updateFrequency, isPending: isUpdating } =
+    useApiTaxComplianceFilingFrequencyUpdate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Filing frequency updated successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to update filing frequency.')
+        },
+      },
+    })
+
+  const { mutate: deleteFrequency, isPending: isDeleting } =
+    useApiTaxComplianceFilingFrequencyDestroy({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Filing frequency deleted successfully.')
+          invalidateList()
+          onCloseDeleteDialog()
+        },
+        onError: () => {
+          toast.error('Failed to delete filing frequency.')
+        },
+      },
+    })
+
   const { control, reset, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { type: '', description: '' },
+    defaultValues: { code: '' },
   })
 
-  const openDrawer = () => {
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: FilingFrequency | null = null
+  ) => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-    reset({ type: '', description: '' })
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({ code: item.code })
+    } else if (mode === 'create') {
+      reset({ code: '' })
+    }
+
     setIsDrawerOpen(true)
   }
 
-  const onSubmit = (data: FormValues) => {
-    console.log('New filing frequency:', data)
-    setIsDrawerOpen(false)
+  const onSubmit = (formData: FormValues) => {
+    if (drawerMode === 'create') {
+      createFrequency({
+        data: { code: formData.code } as any,
+      })
+    } else if (drawerMode === 'edit' && selectedItem) {
+      updateFrequency({
+        id: selectedItem.id,
+        data: { code: formData.code } as any,
+      })
+    }
   }
 
   const handleDelete = (id: string) => {
-    setTargetId(id)
+    setTargetId(Number(id))
     onOpenDeleteDialog()
   }
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!targetId) return
-    setIsDeleting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log(`Filing Frequency ${targetId} has been deleted.`)
-    setIsDeleting(false)
-    onCloseDeleteDialog()
+    deleteFrequency({ id: targetId })
   }
 
   const { columns } = useColumnFilingFrequency({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
   })
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -131,7 +209,7 @@ export default function FilingFrequenciesPage() {
           </div>
           <Button
             className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-            onClick={openDrawer}
+            onClick={() => openDrawer('create')}
           >
             <Plus className="mr-2 h-4 w-4" /> Add Frequency
           </Button>
@@ -153,7 +231,7 @@ export default function FilingFrequenciesPage() {
         }}
       />
 
-      {/* Create Drawer */}
+      {/* Drawer */}
       <Drawer
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
@@ -161,46 +239,76 @@ export default function FilingFrequenciesPage() {
       >
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>Add Filing Frequency</DrawerTitle>
+            <DrawerTitle>
+              {drawerMode === 'create' && 'Add Filing Frequency'}
+              {drawerMode === 'edit' && 'Edit Filing Frequency'}
+              {drawerMode === 'view' && 'Filing Frequency Details'}
+            </DrawerTitle>
             <DrawerDescription>
-              Enter a short type code and its full description.
+              {drawerMode === 'create' && 'Enter a frequency code.'}
+              {drawerMode === 'edit' &&
+                'Update the details of the selected filing frequency.'}
+              {drawerMode === 'view' &&
+                'Details of the selected filing frequency.'}
             </DrawerDescription>
           </DrawerHeader>
 
           <div className="flex-1 overflow-auto p-4">
-            <form
-              id="filing-frequency-form"
-              onSubmit={handleSubmit(onSubmit)}
-              className="mt-2 space-y-4"
-            >
-              <FormController
-                control={control}
-                name="type"
-                Field={Input}
-                fieldProps={{
-                  label: 'Type',
-                  placeholder: 'e.g. M, W, Q',
-                  maxLength: 5,
-                }}
-              />
-              <FormController
-                control={control}
-                name="description"
-                Field={Input}
-                fieldProps={{
-                  label: 'Description',
-                  placeholder: 'e.g. Monthly',
-                }}
-              />
-            </form>
+            {/* View mode */}
+            {drawerMode === 'view' && selectedItem && (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    ID
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.id}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Code
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.code}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Create / Edit form */}
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <form
+                id="filing-frequency-form"
+                onSubmit={handleSubmit(onSubmit)}
+                className="mt-2 space-y-4"
+              >
+                <FormController
+                  control={control}
+                  name="code"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Code',
+                    placeholder: 'e.g. M, W, Q',
+                    maxLength: 20,
+                  }}
+                />
+              </form>
+            )}
           </div>
 
           <DrawerFooter>
-            <Button type="submit" form="filing-frequency-form">
-              Save
-            </Button>
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <Button
+                type="submit"
+                form="filing-frequency-form"
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? 'Saving...' : 'Save'}
+              </Button>
+            )}
             <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">Close</Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>

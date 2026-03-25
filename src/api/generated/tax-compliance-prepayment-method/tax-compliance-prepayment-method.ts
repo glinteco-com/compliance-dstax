@@ -20,6 +20,7 @@ import type {
 
 import type {
   ApiTaxCompliancePrepaymentMethodsListParams,
+  PaginatedPrepaymentMethodList,
   PatchedPrepaymentMethod,
   PrepaymentMethod,
 } from '../../../models'
@@ -59,7 +60,7 @@ export const apiTaxCompliancePrepaymentMethodsList = (
   params?: ApiTaxCompliancePrepaymentMethodsListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<PrepaymentMethod[]>({
+  return customInstance<PaginatedPrepaymentMethodList>({
     url: `/api/tax_compliance/prepayment_methods/`,
     method: 'GET',
     params,

@@ -2,15 +2,21 @@
 
 import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
-import { Trash2 } from 'lucide-react'
+import { Edit2, Eye, Trash2 } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import { FilingType } from '@/models/filingType'
 
 interface UseColumnFilingTypeProps {
+  onView: (item: FilingType) => void
+  onEdit: (item: FilingType) => void
   onDelete: (id: string) => void
 }
 
-export const useColumnFilingType = ({ onDelete }: UseColumnFilingTypeProps) => {
+export const useColumnFilingType = ({
+  onView,
+  onEdit,
+  onDelete,
+}: UseColumnFilingTypeProps) => {
   const columns: Column<FilingType>[] = [
     {
       id: 'id',
@@ -32,10 +38,32 @@ export const useColumnFilingType = ({ onDelete }: UseColumnFilingTypeProps) => {
     {
       id: 'actions',
       label: '',
-      width: 60,
+      width: 140,
       align: 'right',
       render: (item) => (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
+          <CommonTooltip content="View Details">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              onClick={() => onView(item)}
+            >
+              <Eye className="h-4 w-4" />
+              <span className="sr-only">View Details</span>
+            </Button>
+          </CommonTooltip>
+          <CommonTooltip content="Edit">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              onClick={() => onEdit(item)}
+            >
+              <Edit2 className="h-4 w-4" />
+              <span className="sr-only">Edit</span>
+            </Button>
+          </CommonTooltip>
           <CommonTooltip content="Delete">
             <Button
               variant="ghost"

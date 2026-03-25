@@ -1,66 +1,77 @@
+'use client'
+
 import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
-import { Edit2, Trash2, Key, Eye } from 'lucide-react'
+import { Edit2, Trash2, Eye } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { User } from '@/types/user'
+import { User } from '@/models/user'
+
+type UserWithId = User & { id: number }
 
 interface UseColumnClientUserProps {
-  onView: (item: User) => void
-  onEdit: (item: User) => void
-  onResetPassword: (id: string) => void
+  onView: (item: UserWithId) => void
+  onEdit: (item: UserWithId) => void
   onDelete: (id: string) => void
+  clientMap?: Record<number, string>
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  DSTAX_ADMIN: 'DSTax Admin',
+  DSTAX_PREPARER: 'DSTax Preparer',
+  CLIENT_ADMIN: 'Client Admin',
+  CLIENT_STAFF: 'Client Staff',
 }
 
 export const useColumnClientUser = ({
   onView,
   onEdit,
-  onResetPassword,
   onDelete,
+  clientMap = {},
 }: UseColumnClientUserProps) => {
-  const columns: Column<User>[] = [
+  const columns: Column<UserWithId>[] = [
     {
-      id: 'clientName',
-      label: 'Client Name',
-      render: (item) => (
-        <span className="font-medium text-zinc-900">{item.clientName}</span>
-      ),
-    },
-    {
-      id: 'name',
-      label: 'Name',
-      render: (item) => <span>{item.name}</span>,
-    },
-    {
-      id: 'username',
-      label: 'Username',
-      render: (item) => (
-        <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-800">
-          {item.username}
-        </code>
-      ),
-    },
-    {
-      id: 'password',
-      label: 'Password',
-      render: (item) => (
-        <span className="font-mono tracking-widest text-zinc-400">
-          {item.password}
-        </span>
+      id: 'index',
+      label: '#',
+      width: 60,
+      render: (_item, index) => (
+        <span className="font-mono text-xs text-zinc-500">{index + 1}</span>
       ),
     },
     {
       id: 'role',
-      label: 'User Role',
+      label: 'Role',
       render: (item) => (
         <span className="inline-flex items-center rounded-full bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-700/10 ring-inset dark:bg-zinc-900 dark:text-zinc-400 dark:ring-white/10">
-          {item.role}
+          {ROLE_LABELS[item.role] ?? item.role}
+        </span>
+      ),
+    },
+    {
+      id: 'managed_client',
+      label: 'Managed Client ID',
+      render: (item) => (
+        <span className="text-zinc-700 dark:text-zinc-300">
+          {item.managed_client
+            ? (clientMap[item.managed_client] ?? item.managed_client)
+            : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'assigned_legal_entities',
+      label: 'Legal Entities',
+      render: (item) => (
+        <span className="text-zinc-700 dark:text-zinc-300">
+          {item.assigned_legal_entities?.length
+            ? item.assigned_legal_entities.map((le) => le.name).join(', ')
+            : '—'}
         </span>
       ),
     },
     {
       id: 'actions',
       label: '',
-      width: 180,
+      width: 140,
       align: 'right',
       render: (item) => (
         <div className="flex items-center justify-end gap-2">
@@ -68,7 +79,7 @@ export const useColumnClientUser = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
               onClick={() => onView(item)}
             >
               <Eye className="h-4 w-4" />
@@ -79,22 +90,11 @@ export const useColumnClientUser = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
               onClick={() => onEdit(item)}
             >
               <Edit2 className="h-4 w-4" />
               <span className="sr-only">Edit</span>
-            </Button>
-          </CommonTooltip>
-          <CommonTooltip content="Reset Password">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
-              onClick={() => onResetPassword(item.id)}
-            >
-              <Key className="h-4 w-4" />
-              <span className="sr-only">Reset Password</span>
             </Button>
           </CommonTooltip>
           <CommonTooltip content="Delete">
@@ -102,7 +102,7 @@ export const useColumnClientUser = ({
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-red-500 hover:text-red-600"
-              onClick={() => onDelete(item.id)}
+              onClick={() => onDelete(String(item.id))}
             >
               <Trash2 className="h-4 w-4" />
               <span className="sr-only">Delete</span>

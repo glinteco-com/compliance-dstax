@@ -1,13 +1,20 @@
 import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
-import { LegalEntityParams } from '@/types/legal-entity'
+import { ApiCoreLegalEntityListParams } from '@/models/apiCoreLegalEntityListParams'
+import { PaginatedLegalEntityList } from '@/models/paginatedLegalEntityList'
 
-export const useLegalEntities = (params: LegalEntityParams) => {
-  const { data, ...rest } = useApiCoreLegalEntityList(params as any)
+interface PaginationParams {
+  page: number
+  pageSize: number
+  search?: string
+}
 
-  const paginatedData = data as unknown as { count: number; results: any[] }
-
-  return {
-    data: paginatedData,
-    ...rest,
+export const useLegalEntities = (params: PaginationParams) => {
+  const apiParams: ApiCoreLegalEntityListParams = {
+    name__icontains: params.search,
+    page: params.page,
+    page_size: params.pageSize,
   }
+  const { data, ...rest } = useApiCoreLegalEntityList(apiParams)
+
+  return { data: data as unknown as PaginatedLegalEntityList, ...rest }
 }

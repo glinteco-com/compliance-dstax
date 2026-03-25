@@ -20,6 +20,7 @@ import type {
 
 import type {
   ApiTaxComplianceTaxTypeListParams,
+  PaginatedTaxTypeList,
   PatchedTaxType,
   TaxType,
 } from '../../../models'
@@ -59,7 +60,7 @@ export const apiTaxComplianceTaxTypeList = (
   params?: ApiTaxComplianceTaxTypeListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<TaxType[]>({
+  return customInstance<PaginatedTaxTypeList>({
     url: `/api/tax_compliance/tax_type/`,
     method: 'GET',
     params,

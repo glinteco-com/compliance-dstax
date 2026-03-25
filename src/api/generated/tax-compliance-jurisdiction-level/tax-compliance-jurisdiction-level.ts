@@ -21,6 +21,7 @@ import type {
 import type {
   ApiTaxComplianceJurisdictionLevelListParams,
   JurisdictionLevel,
+  PaginatedJurisdictionLevelList,
   PatchedJurisdictionLevel,
 } from '../../../models'
 
@@ -59,7 +60,7 @@ export const apiTaxComplianceJurisdictionLevelList = (
   params?: ApiTaxComplianceJurisdictionLevelListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<JurisdictionLevel[]>({
+  return customInstance<PaginatedJurisdictionLevelList>({
     url: `/api/tax_compliance/jurisdiction_level/`,
     method: 'GET',
     params,

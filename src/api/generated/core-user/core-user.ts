@@ -18,7 +18,12 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query'
 
-import type { ApiCoreUserListParams, PatchedUser, User } from '../../../models'
+import type {
+  ApiCoreUserListParams,
+  PaginatedUserList,
+  PatchedUser,
+  User,
+} from '../../../models'
 
 import { customInstance } from '../../mutator/custom-instance'
 import type { ErrorType } from '../../mutator/custom-instance'
@@ -55,7 +60,7 @@ export const apiCoreUserList = (
   params?: ApiCoreUserListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<User[]>({
+  return customInstance<PaginatedUserList>({
     url: `/api/core/user/`,
     method: 'GET',
     params,

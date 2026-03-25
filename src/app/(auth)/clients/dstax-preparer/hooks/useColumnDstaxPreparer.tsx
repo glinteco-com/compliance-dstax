@@ -1,46 +1,55 @@
+'use client'
+
 import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
-import { Edit2, Trash2, Mail, Eye } from 'lucide-react'
+import { Edit2, Trash2, Eye } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { Preparer } from '@/types/dstax-preparer'
+import { User } from '@/models/user'
+
+type UserWithId = User & { id: number }
 
 interface UseColumnDstaxPreparerProps {
-  onView: (item: Preparer) => void
-  onEdit: (item: Preparer) => void
+  onView: (item: UserWithId) => void
+  onEdit: (item: UserWithId) => void
   onDelete: (id: string) => void
+  clientMap?: Record<number, string>
 }
 
 export const useColumnDstaxPreparer = ({
   onView,
   onEdit,
   onDelete,
+  clientMap = {},
 }: UseColumnDstaxPreparerProps) => {
-  const columns: Column<Preparer>[] = [
+  const columns: Column<UserWithId>[] = [
     {
-      id: 'name',
-      label: 'Name',
-      render: (item) => (
-        <span className="font-medium text-zinc-900">{item.name}</span>
+      id: 'index',
+      label: '#',
+      width: 60,
+      render: (_item, index) => (
+        <span className="font-mono text-xs text-zinc-500">{index + 1}</span>
       ),
     },
     {
-      id: 'email',
-      label: 'Email',
+      id: 'managed_client',
+      label: 'Managed Client ID',
       render: (item) => (
-        <a
-          href={`mailto:${item.email}`}
-          className="inline-flex items-center text-zinc-600 hover:text-zinc-900"
-        >
-          <Mail className="mr-2 h-4 w-4" />
-          {item.email}
-        </a>
+        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+          {item.managed_client
+            ? (clientMap[item.managed_client] ?? item.managed_client)
+            : '—'}
+        </span>
       ),
     },
     {
-      id: 'assignedClients',
-      label: 'Assigned Clients',
+      id: 'assigned_legal_entities',
+      label: 'Assigned Legal Entities',
       render: (item) => (
-        <span className="text-zinc-600">{item.assignedClients}</span>
+        <span className="text-zinc-700 dark:text-zinc-300">
+          {item.assigned_legal_entities?.length
+            ? item.assigned_legal_entities.map((le) => le.name).join(', ')
+            : '—'}
+        </span>
       ),
     },
     {
@@ -54,7 +63,7 @@ export const useColumnDstaxPreparer = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
               onClick={() => onView(item)}
             >
               <Eye className="h-4 w-4" />
@@ -65,7 +74,7 @@ export const useColumnDstaxPreparer = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
               onClick={() => onEdit(item)}
             >
               <Edit2 className="h-4 w-4" />
@@ -77,7 +86,7 @@ export const useColumnDstaxPreparer = ({
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-red-500 hover:text-red-600"
-              onClick={() => onDelete(item.id)}
+              onClick={() => onDelete(String(item.id))}
             >
               <Trash2 className="h-4 w-4" />
               <span className="sr-only">Delete</span>

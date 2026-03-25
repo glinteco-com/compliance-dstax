@@ -27,16 +27,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <QueryClient>
-        <TooltipProvider>
-          <Toaster />
-          <body
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          >
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <QueryClient>
+          <TooltipProvider>
+            <Toaster />
             <div vaul-drawer-wrapper="">{children}</div>
-          </body>
-        </TooltipProvider>
-      </QueryClient>
+          </TooltipProvider>
+        </QueryClient>
+      </body>
     </html>
   )
 }
