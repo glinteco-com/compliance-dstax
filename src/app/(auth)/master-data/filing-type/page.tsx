@@ -4,6 +4,8 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,18 +25,34 @@ import {
 import { useColumnFilingType } from './hooks/useColumnFilingType'
 import { useFilingTypes } from './hooks/useFilingTypes'
 import { useDebounce } from '@/hooks/useDebounce'
+import {
+  useApiTaxComplianceFilingTypeCreate,
+  useApiTaxComplianceFilingTypeUpdate,
+  useApiTaxComplianceFilingTypeDestroy,
+  getApiTaxComplianceFilingTypeListQueryKey,
+} from '@/api/generated/tax-compliance-filing-type/tax-compliance-filing-type'
+import { FilingType } from '@/models/filingType'
 
 const formSchema = z.object({
-  type: z.string().min(1, 'Type is required'),
-  description: z.string().min(1, 'Description is required'),
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(50, 'Must be 50 characters or less'),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function FilingTypePage() {
-  const [isDeleting, setIsDeleting] = React.useState(false)
-  const [targetId, setTargetId] = React.useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const [targetId, setTargetId] = React.useState<number | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] = React.useState<FilingType | null>(
+    null
+  )
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -67,44 +85,109 @@ export default function FilingTypePage() {
     setCurrentPage(1)
   }
 
+  const invalidateList = () => {
+    queryClient.invalidateQueries({
+      queryKey: getApiTaxComplianceFilingTypeListQueryKey(),
+    })
+  }
+
+  const { mutate: createFilingType, isPending: isCreating } =
+    useApiTaxComplianceFilingTypeCreate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Filing type created successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to create filing type.')
+        },
+      },
+    })
+
+  const { mutate: updateFilingType, isPending: isUpdating } =
+    useApiTaxComplianceFilingTypeUpdate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Filing type updated successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to update filing type.')
+        },
+      },
+    })
+
+  const { mutate: deleteFilingType, isPending: isDeleting } =
+    useApiTaxComplianceFilingTypeDestroy({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Filing type deleted successfully.')
+          invalidateList()
+          onCloseDeleteDialog()
+        },
+        onError: () => {
+          toast.error('Failed to delete filing type.')
+        },
+      },
+    })
+
   const { control, reset, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { type: '', description: '' },
+    defaultValues: { name: '' },
   })
 
-  const openDrawer = () => {
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: FilingType | null = null
+  ) => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-    reset({ type: '', description: '' })
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({ name: item.name })
+    } else if (mode === 'create') {
+      reset({ name: '' })
+    }
+
     setIsDrawerOpen(true)
   }
 
-  const onSubmit = (data: FormValues) => {
-    console.log('New filing type:', data)
-    setIsDrawerOpen(false)
+  const onSubmit = (formData: FormValues) => {
+    if (drawerMode === 'create') {
+      createFilingType({
+        data: { name: formData.name } as any,
+      })
+    } else if (drawerMode === 'edit' && selectedItem) {
+      updateFilingType({
+        id: selectedItem.id,
+        data: { name: formData.name } as any,
+      })
+    }
   }
 
   const handleDelete = (id: string) => {
-    setTargetId(id)
+    setTargetId(Number(id))
     onOpenDeleteDialog()
   }
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!targetId) return
-    setIsDeleting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log(`Filing Type ${targetId} has been deleted.`)
-    setIsDeleting(false)
-    onCloseDeleteDialog()
+    deleteFilingType({ id: targetId })
   }
 
   const { columns } = useColumnFilingType({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
   })
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -126,7 +209,7 @@ export default function FilingTypePage() {
           </div>
           <Button
             className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-            onClick={openDrawer}
+            onClick={() => openDrawer('create')}
           >
             <Plus className="mr-2 h-4 w-4" /> Add Filing Type
           </Button>
@@ -148,7 +231,7 @@ export default function FilingTypePage() {
         }}
       />
 
-      {/* Create Drawer */}
+      {/* Drawer */}
       <Drawer
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
@@ -156,45 +239,74 @@ export default function FilingTypePage() {
       >
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>Add Filing Type</DrawerTitle>
+            <DrawerTitle>
+              {drawerMode === 'create' && 'Add Filing Type'}
+              {drawerMode === 'edit' && 'Edit Filing Type'}
+              {drawerMode === 'view' && 'Filing Type Details'}
+            </DrawerTitle>
             <DrawerDescription>
-              Enter a filing type name and its description.
+              {drawerMode === 'create' && 'Enter a filing type name.'}
+              {drawerMode === 'edit' &&
+                'Update the details of the selected filing type.'}
+              {drawerMode === 'view' && 'Details of the selected filing type.'}
             </DrawerDescription>
           </DrawerHeader>
 
           <div className="flex-1 overflow-auto p-4">
-            <form
-              id="filing-type-form"
-              onSubmit={handleSubmit(onSubmit)}
-              className="mt-2 space-y-4"
-            >
-              <FormController
-                control={control}
-                name="type"
-                Field={Input}
-                fieldProps={{
-                  label: 'Type',
-                  placeholder: 'e.g. E-File, Mail, In-Person',
-                }}
-              />
-              <FormController
-                control={control}
-                name="description"
-                Field={Input}
-                fieldProps={{
-                  label: 'Description',
-                  placeholder: 'e.g. Electronic filing via online portal',
-                }}
-              />
-            </form>
+            {/* View mode */}
+            {drawerMode === 'view' && selectedItem && (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    ID
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.id}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Name
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.name}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Create / Edit form */}
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <form
+                id="filing-type-form"
+                onSubmit={handleSubmit(onSubmit)}
+                className="mt-2 space-y-4"
+              >
+                <FormController
+                  control={control}
+                  name="name"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Name',
+                    placeholder: 'e.g. E-File, Mail, In-Person',
+                  }}
+                />
+              </form>
+            )}
           </div>
 
           <DrawerFooter>
-            <Button type="submit" form="filing-type-form">
-              Save
-            </Button>
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <Button
+                type="submit"
+                form="filing-type-form"
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? 'Saving...' : 'Save'}
+              </Button>
+            )}
             <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">Close</Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>

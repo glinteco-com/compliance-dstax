@@ -9,10 +9,19 @@ import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Search } from 'lucide-react'
+import FormController from '@/components/form/FormController'
+import { CommonSelect } from '@/components/select/CommonSelect'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
-import FormController from '@/components/form/FormController'
+import { useColumnClient } from './hooks/useColumnClient'
+import { useClients } from './hooks/useClients'
+import { Client } from '@/models/client'
+import {
+  useApiCoreClientCreate,
+  useApiCoreClientUpdate,
+  useApiCoreClientDestroy,
+  getApiCoreClientListQueryKey,
+} from '@/api/generated/core-client/core-client'
 import {
   Drawer,
   DrawerClose,
@@ -22,27 +31,22 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { useColumnJurisdictionLevel } from './hooks/useColumnJurisdictionLevel'
-import { useJurisdictionLevels } from './hooks/useJurisdictionLevels'
+import { Search, Plus } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
-import {
-  useApiTaxComplianceJurisdictionLevelCreate,
-  useApiTaxComplianceJurisdictionLevelUpdate,
-  useApiTaxComplianceJurisdictionLevelDestroy,
-  getApiTaxComplianceJurisdictionLevelListQueryKey,
-} from '@/api/generated/tax-compliance-jurisdiction-level/tax-compliance-jurisdiction-level'
-import { JurisdictionLevel } from '@/models/jurisdictionLevel'
+
+type ClientWithId = Client & { id: number }
 
 const formSchema = z.object({
   name: z
     .string()
-    .min(1, 'Level name is required')
-    .max(50, 'Must be 50 characters or less'),
+    .min(1, 'Name is required')
+    .max(255, 'Must be 255 characters or less'),
+  is_active: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
-export default function JurisdictionLevelPage() {
+export default function ClientListPage() {
   const queryClient = useQueryClient()
 
   const [targetId, setTargetId] = React.useState<number | null>(null)
@@ -50,8 +54,9 @@ export default function JurisdictionLevelPage() {
   const [drawerMode, setDrawerMode] = React.useState<
     'create' | 'edit' | 'view'
   >('create')
-  const [selectedItem, setSelectedItem] =
-    React.useState<JurisdictionLevel | null>(null)
+  const [selectedItem, setSelectedItem] = React.useState<ClientWithId | null>(
+    null
+  )
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -70,13 +75,13 @@ export default function JurisdictionLevelPage() {
     setCurrentPage(1)
   }, [search])
 
-  const { data, isLoading } = useJurisdictionLevels({
+  const { data, isLoading } = useClients({
     page: currentPage,
     pageSize,
     search: search || undefined,
   })
 
-  const paginatedData = data?.results ?? []
+  const paginatedData = (data?.results ?? []) as ClientWithId[]
   const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
@@ -86,60 +91,63 @@ export default function JurisdictionLevelPage() {
 
   const invalidateList = () => {
     queryClient.invalidateQueries({
-      queryKey: getApiTaxComplianceJurisdictionLevelListQueryKey(),
+      queryKey: getApiCoreClientListQueryKey(),
     })
   }
 
-  const { mutate: createLevel, isPending: isCreating } =
-    useApiTaxComplianceJurisdictionLevelCreate({
+  const { mutate: createClient, isPending: isCreating } =
+    useApiCoreClientCreate({
       mutation: {
         onSuccess: () => {
-          toast.success('Jurisdiction level created successfully.')
+          toast.success('Client created successfully.')
           invalidateList()
           setIsDrawerOpen(false)
         },
         onError: () => {
-          toast.error('Failed to create jurisdiction level.')
+          toast.error('Failed to create client.')
         },
       },
     })
 
-  const { mutate: updateLevel, isPending: isUpdating } =
-    useApiTaxComplianceJurisdictionLevelUpdate({
+  const { mutate: updateClient, isPending: isUpdating } =
+    useApiCoreClientUpdate({
       mutation: {
         onSuccess: () => {
-          toast.success('Jurisdiction level updated successfully.')
+          toast.success('Client updated successfully.')
           invalidateList()
           setIsDrawerOpen(false)
         },
         onError: () => {
-          toast.error('Failed to update jurisdiction level.')
+          toast.error('Failed to update client.')
         },
       },
     })
 
-  const { mutate: deleteLevel, isPending: isDeleting } =
-    useApiTaxComplianceJurisdictionLevelDestroy({
+  const { mutate: deleteClient, isPending: isDeleting } =
+    useApiCoreClientDestroy({
       mutation: {
         onSuccess: () => {
-          toast.success('Jurisdiction level deleted successfully.')
+          toast.success('Client deleted successfully.')
           invalidateList()
           onCloseDeleteDialog()
         },
         onError: () => {
-          toast.error('Failed to delete jurisdiction level.')
+          toast.error('Failed to delete client.')
         },
       },
     })
 
   const { control, reset, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '' },
+    defaultValues: {
+      name: '',
+      is_active: 'true',
+    },
   })
 
   const openDrawer = (
     mode: 'create' | 'edit' | 'view',
-    item: JurisdictionLevel | null = null
+    item: ClientWithId | null = null
   ) => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
@@ -148,23 +156,32 @@ export default function JurisdictionLevelPage() {
     setSelectedItem(item)
 
     if (mode === 'edit' && item) {
-      reset({ name: item.name })
+      reset({
+        name: item.name,
+        is_active: item.is_active !== false ? 'true' : 'false',
+      })
     } else if (mode === 'create') {
-      reset({ name: '' })
+      reset({
+        name: '',
+        is_active: 'true',
+      })
     }
 
     setIsDrawerOpen(true)
   }
 
   const onSubmit = (formData: FormValues) => {
+    const payload = {
+      name: formData.name,
+      is_active: formData.is_active !== 'false',
+    }
+
     if (drawerMode === 'create') {
-      createLevel({
-        data: { name: formData.name } as any,
-      })
+      createClient({ data: payload })
     } else if (drawerMode === 'edit' && selectedItem) {
-      updateLevel({
+      updateClient({
         id: selectedItem.id,
-        data: { name: formData.name } as any,
+        data: payload,
       })
     }
   }
@@ -176,10 +193,10 @@ export default function JurisdictionLevelPage() {
 
   const handleConfirmDelete = () => {
     if (!targetId) return
-    deleteLevel({ id: targetId })
+    deleteClient({ id: targetId })
   }
 
-  const { columns } = useColumnJurisdictionLevel({
+  const { columns } = useColumnClient({
     onView: (item) => openDrawer('view', item),
     onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
@@ -190,10 +207,10 @@ export default function JurisdictionLevelPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Jurisdiction Level
+            Clients
           </h2>
           <p className="text-zinc-500 dark:text-zinc-400">
-            Manage jurisdiction levels such as Country, State, and Local.
+            Manage your client organizations.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -210,7 +227,7 @@ export default function JurisdictionLevelPage() {
             className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
             onClick={() => openDrawer('create')}
           >
-            <Plus className="mr-2 h-4 w-4" /> Add Level
+            <Plus className="mr-2 h-4 w-4" /> Add Client
           </Button>
         </div>
       </div>
@@ -218,7 +235,7 @@ export default function JurisdictionLevelPage() {
       <CommonTable
         columns={columns}
         data={paginatedData}
-        emptyMessage="No jurisdiction levels found"
+        emptyMessage="No clients found"
         isLoading={isLoading}
         pagination={{
           currentPage,
@@ -230,7 +247,6 @@ export default function JurisdictionLevelPage() {
         }}
       />
 
-      {/* Drawer */}
       <Drawer
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
@@ -239,22 +255,21 @@ export default function JurisdictionLevelPage() {
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {drawerMode === 'create' && 'Add Jurisdiction Level'}
-              {drawerMode === 'edit' && 'Edit Jurisdiction Level'}
-              {drawerMode === 'view' && 'Jurisdiction Level Details'}
+              {drawerMode === 'create' && 'Add Client'}
+              {drawerMode === 'edit' && 'Edit Client'}
+              {drawerMode === 'view' && 'Client Details'}
             </DrawerTitle>
             <DrawerDescription>
               {drawerMode === 'create' &&
-                'Enter the details of the new jurisdiction level.'}
+                'Enter the details of the new client.'}
               {drawerMode === 'edit' &&
-                'Update the details of the selected jurisdiction level.'}
+                'Update the details of the selected client.'}
               {drawerMode === 'view' &&
-                'Details of the selected jurisdiction level.'}
+                'Here are the details of the selected client.'}
             </DrawerDescription>
           </DrawerHeader>
 
           <div className="flex-1 overflow-auto p-4">
-            {/* View mode */}
             {drawerMode === 'view' && selectedItem && (
               <div className="space-y-4 text-sm">
                 <div className="grid gap-1">
@@ -267,19 +282,26 @@ export default function JurisdictionLevelPage() {
                 </div>
                 <div className="grid gap-1">
                   <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    Level Name
+                    Name
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-400">
                     {selectedItem.name}
                   </span>
                 </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Status
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.is_active !== false ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
               </div>
             )}
 
-            {/* Create / Edit form */}
             {(drawerMode === 'create' || drawerMode === 'edit') && (
               <form
-                id="jurisdiction-level-form"
+                id="client-form"
                 onSubmit={handleSubmit(onSubmit)}
                 className="mt-2 space-y-4"
               >
@@ -288,8 +310,21 @@ export default function JurisdictionLevelPage() {
                   name="name"
                   Field={Input}
                   fieldProps={{
-                    label: 'Level Name',
-                    placeholder: 'e.g. Country, State, Local',
+                    label: 'Name',
+                    placeholder: 'e.g. Acme Corporation',
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="is_active"
+                  Field={CommonSelect}
+                  fieldProps={{
+                    label: 'Status',
+                    placeholder: 'Select status',
+                    options: [
+                      { value: 'true', label: 'Active' },
+                      { value: 'false', label: 'Inactive' },
+                    ],
                   }}
                 />
               </form>
@@ -300,7 +335,7 @@ export default function JurisdictionLevelPage() {
             {(drawerMode === 'create' || drawerMode === 'edit') && (
               <Button
                 type="submit"
-                form="jurisdiction-level-form"
+                form="client-form"
                 disabled={isCreating || isUpdating}
               >
                 {isCreating || isUpdating ? 'Saving...' : 'Save'}
@@ -313,13 +348,12 @@ export default function JurisdictionLevelPage() {
         </DrawerContent>
       </Drawer>
 
-      {/* Confirm Delete */}
       <ConfirmDialog
         isOpen={isOpenDeleteDialog}
         onOpenChange={setIsOpenDeleteDialog}
         variant="delete"
-        title="Delete Jurisdiction Level"
-        description="Are you sure you want to delete this jurisdiction level? This action cannot be undone."
+        title="Delete Client"
+        description="Are you sure you want to delete this client? This action cannot be undone."
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
       />

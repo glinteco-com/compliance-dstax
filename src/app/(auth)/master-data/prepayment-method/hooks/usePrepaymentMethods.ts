@@ -1,6 +1,6 @@
 import { useApiTaxCompliancePrepaymentMethodsList } from '@/api/generated/tax-compliance-prepayment-method/tax-compliance-prepayment-method'
 import { ApiTaxCompliancePrepaymentMethodsListParams } from '@/models/apiTaxCompliancePrepaymentMethodsListParams'
-import { PrepaymentMethod } from '@/models/prepaymentMethod'
+import { PaginatedPrepaymentMethodList } from '@/models/paginatedPrepaymentMethodList'
 
 interface PaginationParams {
   page: number
@@ -11,17 +11,10 @@ interface PaginationParams {
 export const usePrepaymentMethods = (params: PaginationParams) => {
   const apiParams: ApiTaxCompliancePrepaymentMethodsListParams = {
     method_description__icontains: params.search,
+    page: params.page,
+    page_size: params.pageSize,
   }
-  const { data, ...rest } = useApiTaxCompliancePrepaymentMethodsList({
-    ...apiParams,
-    limit: params.pageSize,
-    offset: (params.page - 1) * params.pageSize,
-  } as any)
+  const { data, ...rest } = useApiTaxCompliancePrepaymentMethodsList(apiParams)
 
-  const paginatedData = data as unknown as {
-    count: number
-    results: PrepaymentMethod[]
-  }
-
-  return { data: paginatedData, ...rest }
+  return { data: data as unknown as PaginatedPrepaymentMethodList, ...rest }
 }

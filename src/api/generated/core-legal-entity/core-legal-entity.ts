@@ -21,6 +21,7 @@ import type {
 import type {
   ApiCoreLegalEntityListParams,
   LegalEntity,
+  PaginatedLegalEntityList,
   PatchedLegalEntity,
 } from '../../../models'
 
@@ -31,7 +32,7 @@ export const apiCoreLegalEntityList = (
   params?: ApiCoreLegalEntityListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<LegalEntity[]>({
+  return customInstance<PaginatedLegalEntityList>({
     url: `/api/core/legal_entity/`,
     method: 'GET',
     params,

@@ -4,34 +4,52 @@ import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Edit2, Eye, Trash2 } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { JurisdictionLevel } from '@/models/jurisdictionLevel'
+import { Client } from '@/models/client'
 
-interface UseColumnJurisdictionLevelProps {
-  onView: (item: JurisdictionLevel) => void
-  onEdit: (item: JurisdictionLevel) => void
+type ClientWithId = Client & { id: number }
+
+interface UseColumnClientProps {
+  onView: (item: ClientWithId) => void
+  onEdit: (item: ClientWithId) => void
   onDelete: (id: string) => void
 }
 
-export const useColumnJurisdictionLevel = ({
+export const useColumnClient = ({
   onView,
   onEdit,
   onDelete,
-}: UseColumnJurisdictionLevelProps) => {
-  const columns: Column<JurisdictionLevel>[] = [
+}: UseColumnClientProps) => {
+  const columns: Column<ClientWithId>[] = [
     {
-      id: 'id',
-      label: 'ID',
-      width: 100,
-      render: (item) => (
-        <span className="font-mono text-xs text-zinc-500">{item.id}</span>
+      id: 'index',
+      label: '#',
+      width: 60,
+      render: (_item, index) => (
+        <span className="font-mono text-xs text-zinc-500">{index + 1}</span>
       ),
     },
     {
       id: 'name',
-      label: 'Level Name',
+      label: 'Name',
       render: (item) => (
         <span className="font-medium text-zinc-900 dark:text-zinc-100">
           {item.name}
+        </span>
+      ),
+    },
+    {
+      id: 'is_active',
+      label: 'Status',
+      width: 120,
+      render: (item) => (
+        <span
+          className={
+            item.is_active !== false
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-zinc-400'
+          }
+        >
+          {item.is_active !== false ? 'Active' : 'Inactive'}
         </span>
       ),
     },

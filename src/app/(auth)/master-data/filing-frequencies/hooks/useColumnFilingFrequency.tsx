@@ -2,15 +2,19 @@
 
 import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
-import { Trash2 } from 'lucide-react'
+import { Edit2, Eye, Trash2 } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import { FilingFrequency } from '@/models/filingFrequency'
 
 interface UseColumnFilingFrequencyProps {
+  onView: (item: FilingFrequency) => void
+  onEdit: (item: FilingFrequency) => void
   onDelete: (id: string) => void
 }
 
 export const useColumnFilingFrequency = ({
+  onView,
+  onEdit,
   onDelete,
 }: UseColumnFilingFrequencyProps) => {
   const columns: Column<FilingFrequency>[] = [
@@ -34,10 +38,32 @@ export const useColumnFilingFrequency = ({
     {
       id: 'actions',
       label: '',
-      width: 60,
+      width: 140,
       align: 'right',
       render: (item) => (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
+          <CommonTooltip content="View Details">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              onClick={() => onView(item)}
+            >
+              <Eye className="h-4 w-4" />
+              <span className="sr-only">View Details</span>
+            </Button>
+          </CommonTooltip>
+          <CommonTooltip content="Edit">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              onClick={() => onEdit(item)}
+            >
+              <Edit2 className="h-4 w-4" />
+              <span className="sr-only">Edit</span>
+            </Button>
+          </CommonTooltip>
           <CommonTooltip content="Delete">
             <Button
               variant="ghost"

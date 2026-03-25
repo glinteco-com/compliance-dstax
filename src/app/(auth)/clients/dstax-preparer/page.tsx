@@ -4,15 +4,28 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormController from '@/components/form/FormController'
+import { CommonSelect } from '@/components/select/CommonSelect'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useColumnDstaxPreparer } from './hooks/useColumnDstaxPreparer'
 import { usePreparers } from './hooks/usePreparers'
-import { Preparer } from '@/types/dstax-preparer'
+import { User } from '@/models/user'
+import {
+  useApiCoreUserCreate,
+  useApiCoreUserUpdate,
+  useApiCoreUserDestroy,
+  getApiCoreUserListQueryKey,
+} from '@/api/generated/core-user/core-user'
+import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
+import { PaginatedClientList } from '@/models/paginatedClientList'
+import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
+import { PaginatedLegalEntityList } from '@/models/paginatedLegalEntityList'
 import {
   Drawer,
   DrawerClose,
@@ -25,17 +38,24 @@ import {
 import { Search, Plus } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 
+type UserWithId = User & { id: number }
+
 const formSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  assignedClients: z.coerce.number().min(0, 'Must be at least 0').optional(),
+  managed_client: z.string().optional(),
+  assigned_legal_entity_ids: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function PreparersPage() {
-  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
-  const [targetPreparerId, setTargetPreparerId] = React.useState<string | null>(
+  const queryClient = useQueryClient()
+
+  const [targetId, setTargetId] = React.useState<number | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] = React.useState<UserWithId | null>(
     null
   )
 
@@ -45,68 +65,6 @@ export default function PreparersPage() {
     onCloseDialog: onCloseDeleteDialog,
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
-
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
-  const [drawerMode, setDrawerMode] = React.useState<
-    'create' | 'edit' | 'view'
-  >('create')
-  const [selectedItem, setSelectedItem] = React.useState<Preparer | null>(null)
-
-  const { control, reset, handleSubmit } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      assignedClients: 0,
-    },
-  })
-
-  const openDrawer = (
-    mode: 'create' | 'edit' | 'view',
-    item: Preparer | null = null
-  ) => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
-    }
-    setDrawerMode(mode)
-    setSelectedItem(item)
-
-    if (mode === 'edit' && item) {
-      reset({
-        name: item.name,
-        email: item.email,
-        assignedClients: item.assignedClients,
-      })
-    } else if (mode === 'create') {
-      reset({
-        name: '',
-        email: '',
-        assignedClients: 0,
-      })
-    }
-
-    setIsDrawerOpen(true)
-  }
-
-  const onSubmit = (data: FormValues) => {
-    console.log('Form submitted:', data)
-    setIsDrawerOpen(false)
-  }
-
-  const handleDelete = (id: string) => {
-    setTargetPreparerId(id)
-    onOpenDeleteDialog()
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!targetPreparerId) return
-    setIsDeleting(targetPreparerId)
-    // Mocking an async operation
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    alert(`Preparer ${targetPreparerId} has been deleted.`)
-    setIsDeleting(null)
-    onCloseDeleteDialog()
-  }
 
   const [searchInput, setSearchInput] = React.useState('')
   const search = useDebounce(searchInput, 400)
@@ -124,7 +82,47 @@ export default function PreparersPage() {
     search: search || undefined,
   })
 
-  const paginatedData = data?.results ?? []
+  const { data: clientsData } = useApiCoreClientList({
+    page: 1,
+    page_size: 100,
+  })
+
+  const clients = ((clientsData as unknown as PaginatedClientList)?.results ??
+    []) as { id: number; name: string }[]
+
+  const clientOptions = [
+    { value: '', label: 'None' },
+    ...clients.map((c) => ({
+      value: String(c.id),
+      label: c.name,
+    })),
+  ]
+
+  const clientMap = React.useMemo(() => {
+    const map: Record<number, string> = {}
+    clients.forEach((c) => {
+      map[c.id] = c.name
+    })
+    return map
+  }, [clients])
+
+  const { data: legalEntitiesData } = useApiCoreLegalEntityList({
+    page: 1,
+    page_size: 100,
+  })
+
+  const legalEntities = ((
+    legalEntitiesData as unknown as PaginatedLegalEntityList
+  )?.results ?? []) as unknown as { id: number; name: string }[]
+
+  const legalEntityOptions = legalEntities
+    .filter((le) => le.id != null)
+    .map((le) => ({
+      value: String(le.id),
+      label: le.name,
+    }))
+
+  const paginatedData = (data?.results ?? []) as UserWithId[]
   const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
@@ -132,18 +130,136 @@ export default function PreparersPage() {
     setCurrentPage(1)
   }
 
+  const invalidateList = () => {
+    queryClient.invalidateQueries({
+      queryKey: getApiCoreUserListQueryKey(),
+    })
+  }
+
+  const { mutate: createPreparer, isPending: isCreating } =
+    useApiCoreUserCreate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Preparer created successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to create preparer.')
+        },
+      },
+    })
+
+  const { mutate: updatePreparer, isPending: isUpdating } =
+    useApiCoreUserUpdate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Preparer updated successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to update preparer.')
+        },
+      },
+    })
+
+  const { mutate: deletePreparer, isPending: isDeleting } =
+    useApiCoreUserDestroy({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Preparer deleted successfully.')
+          invalidateList()
+          onCloseDeleteDialog()
+        },
+        onError: () => {
+          toast.error('Failed to delete preparer.')
+        },
+      },
+    })
+
+  const { control, reset, handleSubmit } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      managed_client: '',
+      assigned_legal_entity_ids: '',
+    },
+  })
+
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: UserWithId | null = null
+  ) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({
+        managed_client: item.managed_client ? String(item.managed_client) : '',
+        assigned_legal_entity_ids: item.assigned_legal_entity_ids?.length
+          ? String(item.assigned_legal_entity_ids[0])
+          : '',
+      })
+    } else if (mode === 'create') {
+      reset({
+        managed_client: '',
+        assigned_legal_entity_ids: '',
+      })
+    }
+
+    setIsDrawerOpen(true)
+  }
+
+  const onSubmit = (formData: FormValues) => {
+    const entityId = formData.assigned_legal_entity_ids
+      ? Number(formData.assigned_legal_entity_ids)
+      : null
+    const payload = {
+      role: 'DSTAX_PREPARER' as const,
+      managed_client: formData.managed_client
+        ? Number(formData.managed_client)
+        : null,
+      assigned_legal_entity_ids: entityId && !isNaN(entityId) ? [entityId] : [],
+    }
+
+    if (drawerMode === 'create') {
+      createPreparer({ data: payload as any })
+    } else if (drawerMode === 'edit' && selectedItem) {
+      updatePreparer({
+        id: selectedItem.id,
+        data: payload as any,
+      })
+    }
+  }
+
+  const handleDelete = (id: string) => {
+    setTargetId(Number(id))
+    onOpenDeleteDialog()
+  }
+
+  const handleConfirmDelete = () => {
+    if (!targetId) return
+    deletePreparer({ id: targetId })
+  }
+
   const { columns } = useColumnDstaxPreparer({
     onView: (item) => openDrawer('view', item),
     onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
+    clientMap,
   })
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">DSTax Preparers</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            DSTax Preparers
+          </h2>
+          <p className="text-zinc-500 dark:text-zinc-400">
             Manage the list of DSTax preparers and their assignments.
           </p>
         </div>
@@ -158,7 +274,7 @@ export default function PreparersPage() {
             />
           </div>
           <Button
-            className="bg-orange-500 hover:bg-orange-600"
+            className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
             onClick={() => openDrawer('create')}
           >
             <Plus className="mr-2 h-4 w-4" /> Add Preparer
@@ -202,27 +318,54 @@ export default function PreparersPage() {
                 'Here are the details of the selected preparer.'}
             </DrawerDescription>
           </DrawerHeader>
+
           <div className="flex-1 overflow-auto p-4">
             {drawerMode === 'view' && selectedItem && (
               <div className="space-y-4 text-sm">
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Name</span>
-                  <span className="text-zinc-600">{selectedItem.name}</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    ID
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.id}
+                  </span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Email</span>
-                  <span className="text-zinc-600">{selectedItem.email}</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Role
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    DSTax Preparer
+                  </span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">
-                    Assigned Clients
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Managed Client
                   </span>
-                  <span className="text-zinc-600">
-                    {selectedItem.assignedClients}
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.managed_client
+                      ? (clientMap[selectedItem.managed_client] ??
+                        selectedItem.managed_client)
+                      : '—'}
                   </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Assigned Legal Entities
+                  </span>
+                  {selectedItem.assigned_legal_entities?.length ? (
+                    <ul className="list-disc pl-5 text-zinc-600 dark:text-zinc-400">
+                      {selectedItem.assigned_legal_entities.map((le) => (
+                        <li key={le.name}>{le.name}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-zinc-600 dark:text-zinc-400">—</span>
+                  )}
                 </div>
               </div>
             )}
+
             {(drawerMode === 'create' || drawerMode === 'edit') && (
               <form
                 id="preparer-form"
@@ -231,40 +374,36 @@ export default function PreparersPage() {
               >
                 <FormController
                   control={control}
-                  name="name"
-                  Field={Input}
+                  name="managed_client"
+                  Field={CommonSelect}
                   fieldProps={{
-                    label: 'Name',
-                    placeholder: 'e.g. Alice Johnson',
+                    label: 'Managed Client',
+                    placeholder: 'Select a client',
+                    options: clientOptions,
                   }}
                 />
                 <FormController
                   control={control}
-                  name="email"
-                  Field={Input}
+                  name="assigned_legal_entity_ids"
+                  Field={CommonSelect}
                   fieldProps={{
-                    label: 'Email',
-                    type: 'email',
-                    placeholder: 'e.g. alice.j@dstax.com',
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="assignedClients"
-                  Field={Input}
-                  fieldProps={{
-                    label: 'Assigned Clients',
-                    type: 'number',
-                    placeholder: 'e.g. 5',
+                    label: 'Assigned Legal Entity',
+                    placeholder: 'Select a legal entity',
+                    options: legalEntityOptions,
                   }}
                 />
               </form>
             )}
           </div>
+
           <DrawerFooter>
             {(drawerMode === 'create' || drawerMode === 'edit') && (
-              <Button type="submit" form="preparer-form">
-                Save changes
+              <Button
+                type="submit"
+                form="preparer-form"
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? 'Saving...' : 'Save'}
               </Button>
             )}
             <DrawerClose asChild>
@@ -281,7 +420,7 @@ export default function PreparersPage() {
         title="Delete Preparer"
         description="Are you sure you want to delete this preparer? This action cannot be undone."
         onConfirm={handleConfirmDelete}
-        isLoading={!!isDeleting}
+        isLoading={isDeleting}
       />
     </div>
   )

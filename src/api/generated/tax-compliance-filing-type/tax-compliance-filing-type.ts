@@ -21,6 +21,7 @@ import type {
 import type {
   ApiTaxComplianceFilingTypeListParams,
   FilingType,
+  PaginatedFilingTypeList,
   PatchedFilingType,
 } from '../../../models'
 
@@ -59,7 +60,7 @@ export const apiTaxComplianceFilingTypeList = (
   params?: ApiTaxComplianceFilingTypeListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<FilingType[]>({
+  return customInstance<PaginatedFilingTypeList>({
     url: `/api/tax_compliance/filing_type/`,
     method: 'GET',
     params,

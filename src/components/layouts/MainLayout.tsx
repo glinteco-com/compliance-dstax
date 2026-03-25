@@ -57,6 +57,11 @@ const items: NavigationItem[] = [
     icon: <Users className="h-4 w-4" />,
     items: [
       {
+        title: 'Client List',
+        url: '/clients/client-list',
+        icon: <Building2 className="h-4 w-4" />,
+      },
+      {
         title: 'Legal Entities',
         url: '/clients/legal-entities',
         icon: <Building2 className="h-4 w-4" />,
@@ -290,7 +295,7 @@ export default function MainLayout({
     <SidebarProvider>
       <AppSidebar />
       <main className="bg-background flex min-h-svh flex-1 flex-col">
-        <div className="flex-1">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
       </main>
     </SidebarProvider>
   )

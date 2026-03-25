@@ -4,6 +4,8 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,27 +26,32 @@ import {
 } from '@/components/ui/drawer'
 import { useColumnJurisdiction } from './hooks/useColumnJurisdiction'
 import { useJurisdictions } from './hooks/useJurisdictions'
-import { Jurisdiction } from '@/models/jurisdiction'
-type JurisdictionLevel = 'Country' | 'State' | 'Local'
 import { useDebounce } from '@/hooks/useDebounce'
-
-const LEVEL_OPTIONS: JurisdictionLevel[] = ['Country', 'State', 'Local']
+import {
+  useApiTaxComplianceJurisdictionCreate,
+  useApiTaxComplianceJurisdictionUpdate,
+  useApiTaxComplianceJurisdictionDestroy,
+  getApiTaxComplianceJurisdictionListQueryKey,
+} from '@/api/generated/tax-compliance-jurisdiction/tax-compliance-jurisdiction'
+import { Jurisdiction } from '@/models/jurisdiction'
+import { useJurisdictionLevels } from '../jurisdictions-level/hooks/useJurisdictionLevels'
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Jurisdiction name is required'),
-  level: z.enum(['Country', 'State', 'Local'], {
-    required_error: 'Level is required',
-  }),
-  dueDate: z.string().min(1, 'Due date is required'),
-  dueDateTime: z.string().min(1, 'Due date time is required'),
+  name: z
+    .string()
+    .min(1, 'Jurisdiction name is required')
+    .max(255, 'Must be 255 characters or less'),
+  level: z.string().min(1, 'Level is required'),
+  dueDate: z.string().optional(),
+  dueDateTime: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function JurisdictionsPage() {
-  const [isDeleting, setIsDeleting] = React.useState(false)
-  const [targetId, setTargetId] = React.useState<string | null>(null)
+  const queryClient = useQueryClient()
 
+  const [targetId, setTargetId] = React.useState<number | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [drawerMode, setDrawerMode] = React.useState<
     'create' | 'edit' | 'view'
@@ -76,6 +83,16 @@ export default function JurisdictionsPage() {
     search: search || undefined,
   })
 
+  const { data: levelsData } = useJurisdictionLevels({
+    page: 1,
+    pageSize: 100,
+  })
+
+  const levelOptions = (levelsData?.results ?? []).map((l) => ({
+    value: String(l.id),
+    label: l.name,
+  }))
+
   const paginatedData = data?.results ?? []
   const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
@@ -84,11 +101,59 @@ export default function JurisdictionsPage() {
     setCurrentPage(1)
   }
 
+  const invalidateList = () => {
+    queryClient.invalidateQueries({
+      queryKey: getApiTaxComplianceJurisdictionListQueryKey(),
+    })
+  }
+
+  const { mutate: createJurisdiction, isPending: isCreating } =
+    useApiTaxComplianceJurisdictionCreate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Jurisdiction created successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to create jurisdiction.')
+        },
+      },
+    })
+
+  const { mutate: updateJurisdiction, isPending: isUpdating } =
+    useApiTaxComplianceJurisdictionUpdate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Jurisdiction updated successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to update jurisdiction.')
+        },
+      },
+    })
+
+  const { mutate: deleteJurisdiction, isPending: isDeleting } =
+    useApiTaxComplianceJurisdictionDestroy({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Jurisdiction deleted successfully.')
+          invalidateList()
+          onCloseDeleteDialog()
+        },
+        onError: () => {
+          toast.error('Failed to delete jurisdiction.')
+        },
+      },
+    })
+
   const { control, reset, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      level: undefined,
+      level: '',
       dueDate: '',
       dueDateTime: '',
     },
@@ -107,34 +172,53 @@ export default function JurisdictionsPage() {
     if (mode === 'edit' && item) {
       reset({
         name: item.name,
-        level: item.level_name as any,
+        level: String(item.level),
         dueDate: item.due_date_time?.split('T')[0] || '',
         dueDateTime: item.due_date_time?.split('T')[1]?.substring(0, 5) || '',
       })
     } else if (mode === 'create') {
-      reset({ name: '', level: undefined, dueDate: '', dueDateTime: '' })
+      reset({
+        name: '',
+        level: '',
+        dueDate: '',
+        dueDateTime: '',
+      })
     }
 
     setIsDrawerOpen(true)
   }
 
-  const onSubmit = (data: FormValues) => {
-    console.log('Form submitted:', data)
-    setIsDrawerOpen(false)
+  const buildDueDateTime = (dueDate?: string, dueDateTime?: string) => {
+    if (!dueDate) return null
+    if (dueDateTime) return `${dueDate}T${dueDateTime}:00Z`
+    return `${dueDate}T00:00:00Z`
+  }
+
+  const onSubmit = (formData: FormValues) => {
+    const payload = {
+      name: formData.name,
+      level: Number(formData.level),
+      due_date_time: buildDueDateTime(formData.dueDate, formData.dueDateTime),
+    }
+
+    if (drawerMode === 'create') {
+      createJurisdiction({ data: payload as any })
+    } else if (drawerMode === 'edit' && selectedItem) {
+      updateJurisdiction({
+        id: selectedItem.id,
+        data: payload as any,
+      })
+    }
   }
 
   const handleDelete = (id: string) => {
-    setTargetId(id)
+    setTargetId(Number(id))
     onOpenDeleteDialog()
   }
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!targetId) return
-    setIsDeleting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log(`Jurisdiction ${targetId} has been deleted.`)
-    setIsDeleting(false)
-    onCloseDeleteDialog()
+    deleteJurisdiction({ id: targetId })
   }
 
   const { columns } = useColumnJurisdiction({
@@ -144,7 +228,7 @@ export default function JurisdictionsPage() {
   })
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -216,6 +300,14 @@ export default function JurisdictionsPage() {
               <div className="space-y-4 text-sm">
                 <div className="grid gap-1">
                   <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    ID
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.id}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                     Jurisdiction Name
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-400">
@@ -275,7 +367,7 @@ export default function JurisdictionsPage() {
                   fieldProps={{
                     label: 'Level',
                     placeholder: 'Select a level',
-                    options: LEVEL_OPTIONS.map((l) => ({ value: l, label: l })),
+                    options: levelOptions,
                   }}
                 />
 
@@ -304,8 +396,12 @@ export default function JurisdictionsPage() {
 
           <DrawerFooter>
             {(drawerMode === 'create' || drawerMode === 'edit') && (
-              <Button type="submit" form="jurisdiction-form">
-                Save changes
+              <Button
+                type="submit"
+                form="jurisdiction-form"
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? 'Saving...' : 'Save'}
               </Button>
             )}
             <DrawerClose asChild>
@@ -315,7 +411,7 @@ export default function JurisdictionsPage() {
         </DrawerContent>
       </Drawer>
 
-      {/* Confirm Delete Dialog */}
+      {/* Confirm Delete */}
       <ConfirmDialog
         isOpen={isOpenDeleteDialog}
         onOpenChange={setIsOpenDeleteDialog}

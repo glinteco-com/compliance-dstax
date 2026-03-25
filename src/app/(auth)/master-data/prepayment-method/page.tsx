@@ -4,6 +4,8 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,22 +25,36 @@ import {
 import { useColumnPrepaymentMethod } from './hooks/useColumnPrepaymentMethod'
 import { usePrepaymentMethods } from './hooks/usePrepaymentMethods'
 import { useDebounce } from '@/hooks/useDebounce'
+import {
+  useApiTaxCompliancePrepaymentMethodsCreate,
+  useApiTaxCompliancePrepaymentMethodsUpdate,
+  useApiTaxCompliancePrepaymentMethodsDestroy,
+  getApiTaxCompliancePrepaymentMethodsListQueryKey,
+} from '@/api/generated/tax-compliance-prepayment-method/tax-compliance-prepayment-method'
+import { PrepaymentMethod } from '@/models/prepaymentMethod'
 
 const formSchema = z.object({
-  state: z
+  jurisdiction_id: z.coerce
+    .number({ required_error: 'Jurisdiction ID is required' })
+    .min(1, 'Jurisdiction ID is required'),
+  method_description: z
     .string()
-    .min(1, 'State is required')
-    .max(2, 'State must be a 2-letter code')
-    .toUpperCase(),
-  method: z.string().min(1, 'Prepayment Method is required'),
+    .min(1, 'Prepayment Method is required')
+    .max(255, 'Must be 255 characters or less'),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function PrepaymentMethodPage() {
-  const [isDeleting, setIsDeleting] = React.useState(false)
-  const [targetId, setTargetId] = React.useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const [targetId, setTargetId] = React.useState<number | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] =
+    React.useState<PrepaymentMethod | null>(null)
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -71,44 +87,118 @@ export default function PrepaymentMethodPage() {
     setCurrentPage(1)
   }
 
+  const invalidateList = () => {
+    queryClient.invalidateQueries({
+      queryKey: getApiTaxCompliancePrepaymentMethodsListQueryKey(),
+    })
+  }
+
+  const { mutate: createMethod, isPending: isCreating } =
+    useApiTaxCompliancePrepaymentMethodsCreate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Prepayment method created successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to create prepayment method.')
+        },
+      },
+    })
+
+  const { mutate: updateMethod, isPending: isUpdating } =
+    useApiTaxCompliancePrepaymentMethodsUpdate({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Prepayment method updated successfully.')
+          invalidateList()
+          setIsDrawerOpen(false)
+        },
+        onError: () => {
+          toast.error('Failed to update prepayment method.')
+        },
+      },
+    })
+
+  const { mutate: deleteMethod, isPending: isDeleting } =
+    useApiTaxCompliancePrepaymentMethodsDestroy({
+      mutation: {
+        onSuccess: () => {
+          toast.success('Prepayment method deleted successfully.')
+          invalidateList()
+          onCloseDeleteDialog()
+        },
+        onError: () => {
+          toast.error('Failed to delete prepayment method.')
+        },
+      },
+    })
+
   const { control, reset, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { state: '', method: '' },
+    defaultValues: { jurisdiction_id: undefined, method_description: '' },
   })
 
-  const openDrawer = () => {
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: PrepaymentMethod | null = null
+  ) => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-    reset({ state: '', method: '' })
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({
+        jurisdiction_id: item.jurisdiction_id,
+        method_description: item.method_description,
+      })
+    } else if (mode === 'create') {
+      reset({ jurisdiction_id: undefined, method_description: '' })
+    }
+
     setIsDrawerOpen(true)
   }
 
-  const onSubmit = (data: FormValues) => {
-    console.log('New prepayment method:', data)
-    setIsDrawerOpen(false)
+  const onSubmit = (formData: FormValues) => {
+    if (drawerMode === 'create') {
+      createMethod({
+        data: {
+          jurisdiction_id: formData.jurisdiction_id,
+          method_description: formData.method_description,
+        } as any,
+      })
+    } else if (drawerMode === 'edit' && selectedItem) {
+      updateMethod({
+        id: selectedItem.id,
+        data: {
+          jurisdiction_id: formData.jurisdiction_id,
+          method_description: formData.method_description,
+        } as any,
+      })
+    }
   }
 
   const handleDelete = (id: string) => {
-    setTargetId(id)
+    setTargetId(Number(id))
     onOpenDeleteDialog()
   }
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!targetId) return
-    setIsDeleting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log(`Prepayment Method ${targetId} has been deleted.`)
-    setIsDeleting(false)
-    onCloseDeleteDialog()
+    deleteMethod({ id: targetId })
   }
 
   const { columns } = useColumnPrepaymentMethod({
+    onView: (item) => openDrawer('view', item),
+    onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
   })
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -130,7 +220,7 @@ export default function PrepaymentMethodPage() {
           </div>
           <Button
             className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-            onClick={openDrawer}
+            onClick={() => openDrawer('create')}
           >
             <Plus className="mr-2 h-4 w-4" /> Add Method
           </Button>
@@ -152,7 +242,7 @@ export default function PrepaymentMethodPage() {
         }}
       />
 
-      {/* Create Drawer */}
+      {/* Drawer */}
       <Drawer
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
@@ -160,46 +250,86 @@ export default function PrepaymentMethodPage() {
       >
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>Add Prepayment Method</DrawerTitle>
+            <DrawerTitle>
+              {drawerMode === 'create' && 'Add Prepayment Method'}
+              {drawerMode === 'edit' && 'Edit Prepayment Method'}
+              {drawerMode === 'view' && 'Prepayment Method Details'}
+            </DrawerTitle>
             <DrawerDescription>
-              Enter a state code and its corresponding prepayment method.
+              {drawerMode === 'create' &&
+                'Enter a jurisdiction and its corresponding prepayment method.'}
+              {drawerMode === 'edit' &&
+                'Update the details of the selected prepayment method.'}
+              {drawerMode === 'view' &&
+                'Details of the selected prepayment method.'}
             </DrawerDescription>
           </DrawerHeader>
 
           <div className="flex-1 overflow-auto p-4">
-            <form
-              id="prepayment-method-form"
-              onSubmit={handleSubmit(onSubmit)}
-              className="mt-2 space-y-4"
-            >
-              <FormController
-                control={control}
-                name="state"
-                Field={Input}
-                fieldProps={{
-                  label: 'State',
-                  placeholder: 'e.g. FL, OK, OH, NY',
-                  maxLength: 2,
-                }}
-              />
-              <FormController
-                control={control}
-                name="method"
-                Field={Input}
-                fieldProps={{
-                  label: 'Prepayment Method',
-                  placeholder: 'e.g. Fixed, PromptTax...',
-                }}
-              />
-            </form>
+            {/* View mode */}
+            {drawerMode === 'view' && selectedItem && (
+              <div className="space-y-4 text-sm">
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    State
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.jurisdiction?.name || '-'}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Prepayment Method
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.method_description}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Create / Edit form */}
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <form
+                id="prepayment-method-form"
+                onSubmit={handleSubmit(onSubmit)}
+                className="mt-2 space-y-4"
+              >
+                <FormController
+                  control={control}
+                  name="jurisdiction_id"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Jurisdiction ID',
+                    placeholder: 'e.g. 1, 2, 3',
+                    type: 'number',
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="method_description"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Prepayment Method',
+                    placeholder: 'e.g. Fixed, PromptTax...',
+                  }}
+                />
+              </form>
+            )}
           </div>
 
           <DrawerFooter>
-            <Button type="submit" form="prepayment-method-form">
-              Save
-            </Button>
+            {(drawerMode === 'create' || drawerMode === 'edit') && (
+              <Button
+                type="submit"
+                form="prepayment-method-form"
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? 'Saving...' : 'Save'}
+              </Button>
+            )}
             <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">Close</Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>

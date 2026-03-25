@@ -4,18 +4,31 @@ import * as React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PasswordInput } from '@/components/ui/password'
 import { Search, Plus } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import FormController from '@/components/form/FormController'
+import { CommonSelect } from '@/components/select/CommonSelect'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useColumnClientUser } from './hooks/useColumnClientUser'
 import { useUsers } from './hooks/useUsers'
-import { User } from '@/types/user'
+import { User } from '@/models/user'
+import { RoleEnum } from '@/models/roleEnum'
+import {
+  useApiCoreUserCreate,
+  useApiCoreUserUpdate,
+  useApiCoreUserDestroy,
+  getApiCoreUserListQueryKey,
+} from '@/api/generated/core-user/core-user'
+import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
+import { PaginatedClientList } from '@/models/paginatedClientList'
+import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
+import { PaginatedLegalEntityList } from '@/models/paginatedLegalEntityList'
 import {
   Drawer,
   DrawerClose,
@@ -26,26 +39,34 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 
+type UserWithId = User & { id: number }
+
+const ROLE_LABELS: Record<string, string> = {
+  DSTAX_ADMIN: 'DSTax Admin',
+  DSTAX_PREPARER: 'DSTax Preparer',
+  CLIENT_ADMIN: 'Client Admin',
+  CLIENT_STAFF: 'Client Staff',
+}
+
 const formSchema = z.object({
-  clientName: z.string().min(1, 'Client Name is required'),
-  name: z.string().min(1, 'Name is required'),
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().optional(),
   role: z.string().min(1, 'Role is required'),
+  managed_client: z.string().optional(),
+  assigned_legal_entity_ids: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
 export default function UsersPage() {
-  const [isResetting, setIsResetting] = React.useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  const {
-    isOpenDialog: isOpenResetDialog,
-    onOpenDialog: onOpenResetDialog,
-    onCloseDialog: onCloseResetDialog,
-    setIsOpenDialog: setIsOpenResetDialog,
-  } = useDialog()
+  const [targetId, setTargetId] = React.useState<number | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [drawerMode, setDrawerMode] = React.useState<
+    'create' | 'edit' | 'view'
+  >('create')
+  const [selectedItem, setSelectedItem] = React.useState<UserWithId | null>(
+    null
+  )
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -53,93 +74,6 @@ export default function UsersPage() {
     onCloseDialog: onCloseDeleteDialog,
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
-
-  const [targetUserId, setTargetUserId] = React.useState<string | null>(null)
-
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
-  const [drawerMode, setDrawerMode] = React.useState<
-    'create' | 'edit' | 'view'
-  >('create')
-  const [selectedItem, setSelectedItem] = React.useState<User | null>(null)
-
-  const { control, reset, handleSubmit } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      clientName: '',
-      name: '',
-      username: '',
-      password: '',
-      role: '',
-    },
-  })
-
-  const openDrawer = (
-    mode: 'create' | 'edit' | 'view',
-    item: User | null = null
-  ) => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
-    }
-    setDrawerMode(mode)
-    setSelectedItem(item)
-
-    if (mode === 'edit' && item) {
-      reset({
-        clientName: item.clientName,
-        name: item.name,
-        username: item.username,
-        password: item.password || '',
-        role: item.role,
-      })
-    } else if (mode === 'create') {
-      reset({
-        clientName: '',
-        name: '',
-        username: '',
-        password: '',
-        role: '',
-      })
-    }
-
-    setIsDrawerOpen(true)
-  }
-
-  const onSubmit = (data: FormValues) => {
-    console.log('Form submitted:', data)
-    setIsDrawerOpen(false)
-  }
-
-  const handleResetPassword = (id: string) => {
-    setTargetUserId(id)
-    onOpenResetDialog()
-  }
-
-  const handleConfirmResetPassword = async () => {
-    if (!targetUserId) return
-    setIsResetting(targetUserId)
-    // Mocking an async operation
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    alert(
-      `Password reset for user ${targetUserId}. A reset link has been sent.`
-    )
-    setIsResetting(null)
-    onCloseResetDialog()
-  }
-
-  const handleDelete = (id: string) => {
-    setTargetUserId(id)
-    onOpenDeleteDialog()
-  }
-
-  const handleConfirmDelete = async () => {
-    if (!targetUserId) return
-    setIsDeleting(targetUserId)
-    // Mocking an async operation
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    alert(`User ${targetUserId} has been deleted.`)
-    setIsDeleting(null)
-    onCloseDeleteDialog()
-  }
 
   const [searchInput, setSearchInput] = React.useState('')
   const search = useDebounce(searchInput, 400)
@@ -157,7 +91,52 @@ export default function UsersPage() {
     search: search || undefined,
   })
 
-  const paginatedData = data?.results ?? []
+  const { data: clientsData } = useApiCoreClientList({
+    page: 1,
+    page_size: 100,
+  })
+
+  const clients = ((clientsData as unknown as PaginatedClientList)?.results ??
+    []) as { id: number; name: string }[]
+
+  const clientOptions = [
+    { value: '', label: 'None' },
+    ...clients.map((c) => ({
+      value: String(c.id),
+      label: c.name,
+    })),
+  ]
+
+  const clientMap = React.useMemo(() => {
+    const map: Record<number, string> = {}
+    clients.forEach((c) => {
+      map[c.id] = c.name
+    })
+    return map
+  }, [clients])
+
+  const { data: legalEntitiesData } = useApiCoreLegalEntityList({
+    page: 1,
+    page_size: 100,
+  })
+
+  const legalEntities = ((
+    legalEntitiesData as unknown as PaginatedLegalEntityList
+  )?.results ?? []) as unknown as { id: number; name: string }[]
+
+  const legalEntityOptions = legalEntities
+    .filter((le) => le.id != null)
+    .map((le) => ({
+      value: String(le.id),
+      label: le.name,
+    }))
+
+  const roleOptions = Object.entries(RoleEnum).map(([, value]) => ({
+    value,
+    label: ROLE_LABELS[value] ?? value,
+  }))
+
+  const paginatedData = (data?.results ?? []) as UserWithId[]
   const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
   const handlePageSizeChange = (newSize: number) => {
@@ -165,19 +144,136 @@ export default function UsersPage() {
     setCurrentPage(1)
   }
 
+  const invalidateList = () => {
+    queryClient.invalidateQueries({
+      queryKey: getApiCoreUserListQueryKey(),
+    })
+  }
+
+  const { mutate: createUser, isPending: isCreating } = useApiCoreUserCreate({
+    mutation: {
+      onSuccess: () => {
+        toast.success('User created successfully.')
+        invalidateList()
+        setIsDrawerOpen(false)
+      },
+      onError: () => {
+        toast.error('Failed to create user.')
+      },
+    },
+  })
+
+  const { mutate: updateUser, isPending: isUpdating } = useApiCoreUserUpdate({
+    mutation: {
+      onSuccess: () => {
+        toast.success('User updated successfully.')
+        invalidateList()
+        setIsDrawerOpen(false)
+      },
+      onError: () => {
+        toast.error('Failed to update user.')
+      },
+    },
+  })
+
+  const { mutate: deleteUser, isPending: isDeleting } = useApiCoreUserDestroy({
+    mutation: {
+      onSuccess: () => {
+        toast.success('User deleted successfully.')
+        invalidateList()
+        onCloseDeleteDialog()
+      },
+      onError: () => {
+        toast.error('Failed to delete user.')
+      },
+    },
+  })
+
+  const { control, reset, handleSubmit } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      role: '',
+      managed_client: '',
+      assigned_legal_entity_ids: '',
+    },
+  })
+
+  const openDrawer = (
+    mode: 'create' | 'edit' | 'view',
+    item: UserWithId | null = null
+  ) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+    setDrawerMode(mode)
+    setSelectedItem(item)
+
+    if (mode === 'edit' && item) {
+      reset({
+        role: item.role,
+        managed_client: item.managed_client ? String(item.managed_client) : '',
+        assigned_legal_entity_ids: item.assigned_legal_entity_ids?.length
+          ? String(item.assigned_legal_entity_ids[0])
+          : '',
+      })
+    } else if (mode === 'create') {
+      reset({
+        role: '',
+        managed_client: '',
+        assigned_legal_entity_ids: '',
+      })
+    }
+
+    setIsDrawerOpen(true)
+  }
+
+  const onSubmit = (formData: FormValues) => {
+    const entityId = formData.assigned_legal_entity_ids
+      ? Number(formData.assigned_legal_entity_ids)
+      : null
+    const payload = {
+      role: formData.role as User['role'],
+      managed_client: formData.managed_client
+        ? Number(formData.managed_client)
+        : null,
+      assigned_legal_entity_ids: entityId && !isNaN(entityId) ? [entityId] : [],
+    }
+
+    if (drawerMode === 'create') {
+      createUser({ data: payload as any })
+    } else if (drawerMode === 'edit' && selectedItem) {
+      updateUser({
+        id: selectedItem.id,
+        data: payload as any,
+      })
+    }
+  }
+
+  const handleDelete = (id: string) => {
+    setTargetId(Number(id))
+    onOpenDeleteDialog()
+  }
+
+  const handleConfirmDelete = () => {
+    if (!targetId) return
+    deleteUser({ id: targetId })
+  }
+
   const { columns } = useColumnClientUser({
     onView: (item) => openDrawer('view', item),
     onEdit: (item) => openDrawer('edit', item),
-    onResetPassword: handleResetPassword,
     onDelete: handleDelete,
+    clientMap,
   })
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Users</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Users
+          </h2>
+          <p className="text-zinc-500 dark:text-zinc-400">
             Manage users for each client and their access roles.
           </p>
         </div>
@@ -192,7 +288,7 @@ export default function UsersPage() {
             />
           </div>
           <Button
-            className="bg-orange-500 hover:bg-orange-600"
+            className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
             onClick={() => openDrawer('create')}
           >
             <Plus className="mr-2 h-4 w-4" /> Add User
@@ -235,35 +331,54 @@ export default function UsersPage() {
                 'Here are the details of the selected user.'}
             </DrawerDescription>
           </DrawerHeader>
+
           <div className="flex-1 overflow-auto p-4">
             {drawerMode === 'view' && selectedItem && (
               <div className="space-y-4 text-sm">
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">
-                    Client Name
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    ID
                   </span>
-                  <span className="text-zinc-600">
-                    {selectedItem.clientName}
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.id}
                   </span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Name</span>
-                  <span className="text-zinc-600">{selectedItem.name}</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Role
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {ROLE_LABELS[selectedItem.role] ?? selectedItem.role}
+                  </span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Username</span>
-                  <span className="text-zinc-600">{selectedItem.username}</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Managed Client
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {selectedItem.managed_client
+                      ? (clientMap[selectedItem.managed_client] ??
+                        selectedItem.managed_client)
+                      : '—'}
+                  </span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Password</span>
-                  <span className="text-zinc-600">{selectedItem.password}</span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Role</span>
-                  <span className="text-zinc-600">{selectedItem.role}</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    Assigned Legal Entities
+                  </span>
+                  {selectedItem.assigned_legal_entities?.length ? (
+                    <ul className="list-disc pl-4 text-zinc-600 dark:text-zinc-400">
+                      {selectedItem.assigned_legal_entities.map((le, i) => (
+                        <li key={i}>{le.name}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-zinc-600 dark:text-zinc-400">—</span>
+                  )}
                 </div>
               </div>
             )}
+
             {(drawerMode === 'create' || drawerMode === 'edit') && (
               <form
                 id="user-form"
@@ -272,52 +387,46 @@ export default function UsersPage() {
               >
                 <FormController
                   control={control}
-                  name="clientName"
-                  Field={Input}
-                  fieldProps={{
-                    label: 'Client Name',
-                    placeholder: 'e.g. Global Tech Corp',
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="name"
-                  Field={Input}
-                  fieldProps={{
-                    label: 'Name',
-                    placeholder: 'e.g. Emily Smith',
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="username"
-                  Field={Input}
-                  fieldProps={{ label: 'Username', placeholder: 'e.g. esmith' }}
-                />
-                {drawerMode === 'create' && (
-                  <FormController
-                    control={control}
-                    name="password"
-                    Field={PasswordInput}
-                    fieldProps={{
-                      label: 'Password',
-                      placeholder: 'Enter password',
-                    }}
-                  />
-                )}
-                <FormController
-                  control={control}
                   name="role"
-                  Field={Input}
-                  fieldProps={{ label: 'Role', placeholder: 'e.g. Admin' }}
+                  Field={CommonSelect}
+                  fieldProps={{
+                    label: 'Role',
+                    placeholder: 'Select a role',
+                    options: roleOptions,
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="managed_client"
+                  Field={CommonSelect}
+                  fieldProps={{
+                    label: 'Managed Client',
+                    placeholder: 'Select a client',
+                    options: clientOptions,
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="assigned_legal_entity_ids"
+                  Field={CommonSelect}
+                  fieldProps={{
+                    label: 'Assigned Legal Entity',
+                    placeholder: 'Select a legal entity',
+                    options: legalEntityOptions,
+                  }}
                 />
               </form>
             )}
           </div>
+
           <DrawerFooter>
             {(drawerMode === 'create' || drawerMode === 'edit') && (
-              <Button type="submit" form="user-form">
-                Save changes
+              <Button
+                type="submit"
+                form="user-form"
+                disabled={isCreating || isUpdating}
+              >
+                {isCreating || isUpdating ? 'Saving...' : 'Save'}
               </Button>
             )}
             <DrawerClose asChild>
@@ -328,23 +437,13 @@ export default function UsersPage() {
       </Drawer>
 
       <ConfirmDialog
-        isOpen={isOpenResetDialog}
-        onOpenChange={setIsOpenResetDialog}
-        title="Reset Password"
-        description="Are you sure you want to reset the password for this user? A reset link will be sent to their email."
-        confirmText="Reset"
-        onConfirm={handleConfirmResetPassword}
-        isLoading={!!isResetting}
-      />
-
-      <ConfirmDialog
         isOpen={isOpenDeleteDialog}
         onOpenChange={setIsOpenDeleteDialog}
         variant="delete"
         title="Delete User"
         description="Are you sure you want to delete this user? This action cannot be undone."
         onConfirm={handleConfirmDelete}
-        isLoading={!!isDeleting}
+        isLoading={isDeleting}
       />
     </div>
   )

@@ -21,6 +21,7 @@ import type {
 import type {
   ApiCoreClientListParams,
   Client,
+  PaginatedClientList,
   PatchedClient,
 } from '../../../models'
 
@@ -31,7 +32,7 @@ export const apiCoreClientList = (
   params?: ApiCoreClientListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<Client[]>({
+  return customInstance<PaginatedClientList>({
     url: `/api/core/client/`,
     method: 'GET',
     params,
