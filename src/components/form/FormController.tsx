@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password'
 import { CommonSelect } from '@/components/select/CommonSelect'
+import { CommonCombobox } from '@/components/select/CommonCombobox'
 import { ElementType } from 'react'
 import { Control, Controller, FieldValues, Path } from 'react-hook-form'
 
@@ -13,6 +14,7 @@ type Props<FormType extends FieldValues, FieldProps> = {
 }
 const textFields: ElementType[] = [Input, PasswordInput]
 const selectFields: ElementType[] = [CommonSelect]
+const comboboxFields: ElementType[] = [CommonCombobox]
 
 function FormController<FormType extends FieldValues, FieldProps>({
   name,
@@ -23,6 +25,7 @@ function FormController<FormType extends FieldValues, FieldProps>({
 }: Props<FormType, FieldProps>) {
   const isTextField = textFields.includes(Field)
   const isSelectField = selectFields.includes(Field)
+  const isComboboxField = comboboxFields.includes(Field)
 
   return (
     <div>
@@ -42,12 +45,16 @@ function FormController<FormType extends FieldValues, FieldProps>({
           return (
             <Field
               {...field}
-              value={field.value ?? ''}
+              value={
+                isComboboxField ? (field.value ?? []) : (field.value ?? '')
+              }
               {...fieldProps}
               id={field.name}
               error={fieldState.error?.message}
               {...(hasDefaultBlur && isTextField ? { onBlur } : {})}
-              {...(isSelectField ? { onChange: field.onChange } : {})}
+              {...(isSelectField || isComboboxField
+                ? { onChange: field.onChange }
+                : {})}
             />
           )
         }}

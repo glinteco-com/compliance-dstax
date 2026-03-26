@@ -4,6 +4,7 @@
  */
 
 export interface PatchedLegalEntity {
+  readonly id?: number
   client?: number
   /** @maxLength 255 */
   name?: string

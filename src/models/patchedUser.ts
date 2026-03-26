@@ -6,6 +6,7 @@ import type { RoleEnum } from './roleEnum'
 import type { LegalEntity } from './legalEntity'
 
 export interface PatchedUser {
+  readonly id?: number
   role?: RoleEnum
   /** @nullable */
   managed_client?: number | null

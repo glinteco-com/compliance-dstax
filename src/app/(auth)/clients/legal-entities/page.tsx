@@ -14,16 +14,17 @@ import { CommonSelect } from '@/components/select/CommonSelect'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useColumnLegalEntity } from './hooks/useColumnLegalEntity'
+import { useColumnClientSelect } from './hooks/useColumnClientSelect'
 import { useLegalEntities } from './hooks/useLegalEntities'
+import { useClients } from './hooks/useClients'
 import { LegalEntity } from '@/models/legalEntity'
+import { Client } from '@/models/client'
 import {
   useApiCoreLegalEntityCreate,
   useApiCoreLegalEntityUpdate,
   useApiCoreLegalEntityDestroy,
   getApiCoreLegalEntityListQueryKey,
 } from '@/api/generated/core-legal-entity/core-legal-entity'
-import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
-import { PaginatedClientList } from '@/models/paginatedClientList'
 import {
   Drawer,
   DrawerClose,
@@ -33,9 +34,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { Search, Plus } from 'lucide-react'
+import { Search, Plus, ArrowLeft } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 
+type ClientWithId = Client & { id: number }
 type LegalEntityWithId = LegalEntity & { id: number }
 
 const formSchema = z.object({
@@ -43,7 +45,6 @@ const formSchema = z.object({
     .string()
     .min(1, 'Name is required')
     .max(255, 'Must be 255 characters or less'),
-  client: z.string().min(1, 'Client is required'),
   is_active: z.string().optional(),
 })
 
@@ -51,6 +52,9 @@ type FormValues = z.infer<typeof formSchema>
 
 export default function LegalEntitiesPage() {
   const queryClient = useQueryClient()
+
+  const [selectedClient, setSelectedClient] =
+    React.useState<ClientWithId | null>(null)
 
   const [targetId, setTargetId] = React.useState<number | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
@@ -67,9 +71,28 @@ export default function LegalEntitiesPage() {
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
 
+  // Client list state
+  const [clientSearchInput, setClientSearchInput] = React.useState('')
+  const clientSearch = useDebounce(clientSearchInput, 400)
+  const [clientPage, setClientPage] = React.useState(1)
+  const [clientPageSize, setClientPageSize] = React.useState(10)
+
+  React.useEffect(() => {
+    setClientPage(1)
+  }, [clientSearch])
+
+  const { data: clientsData, isLoading: isLoadingClients } = useClients({
+    page: clientPage,
+    pageSize: clientPageSize,
+    search: clientSearch || undefined,
+  })
+
+  const clientList = (clientsData?.results ?? []) as ClientWithId[]
+  const clientTotalPages = Math.ceil((clientsData?.count ?? 0) / clientPageSize)
+
+  // Legal entity list state
   const [searchInput, setSearchInput] = React.useState('')
   const search = useDebounce(searchInput, 400)
-
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
 
@@ -81,28 +104,8 @@ export default function LegalEntitiesPage() {
     page: currentPage,
     pageSize,
     search: search || undefined,
+    clientId: selectedClient?.id,
   })
-
-  const { data: clientsData } = useApiCoreClientList({
-    page: 1,
-    page_size: 100,
-  })
-
-  const clients = ((clientsData as unknown as PaginatedClientList)?.results ??
-    []) as { id: number; name: string }[]
-
-  const clientOptions = clients.map((c) => ({
-    value: String(c.id),
-    label: c.name,
-  }))
-
-  const clientMap = React.useMemo(() => {
-    const map: Record<number, string> = {}
-    clients.forEach((c) => {
-      map[c.id] = c.name
-    })
-    return map
-  }, [clients])
 
   const paginatedData = (data?.results ?? []) as LegalEntityWithId[]
   const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
@@ -164,7 +167,6 @@ export default function LegalEntitiesPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      client: '',
       is_active: 'true',
     },
   })
@@ -182,13 +184,11 @@ export default function LegalEntitiesPage() {
     if (mode === 'edit' && item) {
       reset({
         name: item.name,
-        client: String(item.client),
         is_active: item.is_active !== false ? 'true' : 'false',
       })
     } else if (mode === 'create') {
       reset({
         name: '',
-        client: '',
         is_active: 'true',
       })
     }
@@ -197,9 +197,11 @@ export default function LegalEntitiesPage() {
   }
 
   const onSubmit = (formData: FormValues) => {
+    if (!selectedClient) return
+
     const payload = {
       name: formData.name,
-      client: Number(formData.client),
+      client: selectedClient.id,
       is_active: formData.is_active !== 'false',
     }
 
@@ -223,23 +225,98 @@ export default function LegalEntitiesPage() {
     deleteLegalEntity({ id: targetId })
   }
 
-  const { columns } = useColumnLegalEntity({
+  const handleSelectClient = (client: ClientWithId) => {
+    setSelectedClient(client)
+    setSearchInput('')
+    setCurrentPage(1)
+  }
+
+  const handleBackToClients = () => {
+    setSelectedClient(null)
+    setSearchInput('')
+    setCurrentPage(1)
+  }
+
+  const { columns: clientColumns } = useColumnClientSelect({
+    onViewLegalEntities: handleSelectClient,
+  })
+
+  const { columns: legalEntityColumns } = useColumnLegalEntity({
     onView: (item) => openDrawer('view', item),
     onEdit: (item) => openDrawer('edit', item),
     onDelete: handleDelete,
-    clientMap,
+    clientMap: selectedClient
+      ? { [selectedClient.id]: selectedClient.name }
+      : {},
   })
 
+  // Client list view
+  if (!selectedClient) {
+    return (
+      <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Clients
+            </h2>
+            <p className="text-zinc-500 dark:text-zinc-400">
+              Select a client to view and manage their legal entities.
+            </p>
+          </div>
+          <div className="relative">
+            <Input
+              placeholder="Search clients..."
+              value={clientSearchInput}
+              onChange={(e) => setClientSearchInput(e.target.value)}
+              className="w-56"
+              prefixIcon={<Search />}
+            />
+          </div>
+        </div>
+
+        <CommonTable
+          columns={clientColumns}
+          data={clientList}
+          emptyMessage="No clients found"
+          isLoading={isLoadingClients}
+          onRowClick={handleSelectClient}
+          pagination={{
+            currentPage: clientPage,
+            totalPages: clientTotalPages,
+            onPageChange: setClientPage,
+            onPageSizeChange: (newSize) => {
+              setClientPageSize(newSize)
+              setClientPage(1)
+            },
+            pageSize: clientPageSize,
+            totalItems: clientsData?.count ?? 0,
+          }}
+        />
+      </div>
+    )
+  }
+
+  // Legal entities view for selected client
   return (
     <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Legal Entities
-          </h2>
-          <p className="text-zinc-500 dark:text-zinc-400">
-            Manage legal entities associated with your clients.
-          </p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBackToClients}
+            className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {selectedClient.name}
+            </h2>
+            <p className="text-zinc-500 dark:text-zinc-400">
+              Legal entities for this client.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -261,7 +338,7 @@ export default function LegalEntitiesPage() {
       </div>
 
       <CommonTable
-        columns={columns}
+        columns={legalEntityColumns}
         data={paginatedData}
         emptyMessage="No legal entities found"
         isLoading={isLoading}
@@ -321,7 +398,7 @@ export default function LegalEntitiesPage() {
                     Client
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-400">
-                    {clientMap[selectedItem.client] ?? selectedItem.client}
+                    {selectedClient.name}
                   </span>
                 </div>
                 <div className="grid gap-1">
@@ -348,16 +425,6 @@ export default function LegalEntitiesPage() {
                   fieldProps={{
                     label: 'Name',
                     placeholder: 'e.g. Global Tech US Inc',
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="client"
-                  Field={CommonSelect}
-                  fieldProps={{
-                    label: 'Client',
-                    placeholder: 'Select a client',
-                    options: clientOptions,
                   }}
                 />
                 <FormController
