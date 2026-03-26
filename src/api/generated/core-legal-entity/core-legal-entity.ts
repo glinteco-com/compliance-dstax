@@ -28,6 +28,34 @@ import type {
 import { customInstance } from '../../mutator/custom-instance'
 import type { ErrorType } from '../../mutator/custom-instance'
 
+// https://stackoverflow.com/questions/49579094/typescript-conditional-types-filter-out-readonly-properties-pick-only-requir/49579497#49579497
+type IfEquals<X, Y, A = X, B = never> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? A : B
+
+type WritableKeys<T> = {
+  [P in keyof T]-?: IfEquals<
+    { [Q in P]: T[P] },
+    { -readonly [Q in P]: T[P] },
+    P
+  >
+}[keyof T]
+
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+  k: infer I
+) => void
+  ? I
+  : never
+type DistributeReadOnlyOverUnions<T> = T extends any ? NonReadonly<T> : never
+
+type Writable<T> = Pick<T, WritableKeys<T>>
+type NonReadonly<T> = [T] extends [UnionToIntersection<T>]
+  ? {
+      [P in keyof Writable<T>]: T[P] extends object
+        ? NonReadonly<NonNullable<T[P]>>
+        : T[P]
+    }
+  : DistributeReadOnlyOverUnions<T>
+
 export const apiCoreLegalEntityList = (
   params?: ApiCoreLegalEntityListParams,
   signal?: AbortSignal
@@ -184,7 +212,7 @@ export function useApiCoreLegalEntityList<
 }
 
 export const apiCoreLegalEntityCreate = (
-  legalEntity: LegalEntity,
+  legalEntity: NonReadonly<LegalEntity>,
   signal?: AbortSignal
 ) => {
   return customInstance<LegalEntity>({
@@ -203,13 +231,13 @@ export const getApiCoreLegalEntityCreateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof apiCoreLegalEntityCreate>>,
     TError,
-    { data: LegalEntity },
+    { data: NonReadonly<LegalEntity> },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof apiCoreLegalEntityCreate>>,
   TError,
-  { data: LegalEntity },
+  { data: NonReadonly<LegalEntity> },
   TContext
 > => {
   const mutationKey = ['apiCoreLegalEntityCreate']
@@ -223,7 +251,7 @@ export const getApiCoreLegalEntityCreateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof apiCoreLegalEntityCreate>>,
-    { data: LegalEntity }
+    { data: NonReadonly<LegalEntity> }
   > = (props) => {
     const { data } = props ?? {}
 
@@ -236,7 +264,7 @@ export const getApiCoreLegalEntityCreateMutationOptions = <
 export type ApiCoreLegalEntityCreateMutationResult = NonNullable<
   Awaited<ReturnType<typeof apiCoreLegalEntityCreate>>
 >
-export type ApiCoreLegalEntityCreateMutationBody = LegalEntity
+export type ApiCoreLegalEntityCreateMutationBody = NonReadonly<LegalEntity>
 export type ApiCoreLegalEntityCreateMutationError = ErrorType<unknown>
 
 export const useApiCoreLegalEntityCreate = <
@@ -247,7 +275,7 @@ export const useApiCoreLegalEntityCreate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof apiCoreLegalEntityCreate>>,
       TError,
-      { data: LegalEntity },
+      { data: NonReadonly<LegalEntity> },
       TContext
     >
   },
@@ -255,7 +283,7 @@ export const useApiCoreLegalEntityCreate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof apiCoreLegalEntityCreate>>,
   TError,
-  { data: LegalEntity },
+  { data: NonReadonly<LegalEntity> },
   TContext
 > => {
   const mutationOptions = getApiCoreLegalEntityCreateMutationOptions(options)
@@ -421,7 +449,7 @@ export function useApiCoreLegalEntityRetrieve<
 
 export const apiCoreLegalEntityUpdate = (
   id: number,
-  legalEntity: LegalEntity
+  legalEntity: NonReadonly<LegalEntity>
 ) => {
   return customInstance<LegalEntity>({
     url: `/api/core/legal_entity/${id}/`,
@@ -438,13 +466,13 @@ export const getApiCoreLegalEntityUpdateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof apiCoreLegalEntityUpdate>>,
     TError,
-    { id: number; data: LegalEntity },
+    { id: number; data: NonReadonly<LegalEntity> },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof apiCoreLegalEntityUpdate>>,
   TError,
-  { id: number; data: LegalEntity },
+  { id: number; data: NonReadonly<LegalEntity> },
   TContext
 > => {
   const mutationKey = ['apiCoreLegalEntityUpdate']
@@ -458,7 +486,7 @@ export const getApiCoreLegalEntityUpdateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof apiCoreLegalEntityUpdate>>,
-    { id: number; data: LegalEntity }
+    { id: number; data: NonReadonly<LegalEntity> }
   > = (props) => {
     const { id, data } = props ?? {}
 
@@ -471,7 +499,7 @@ export const getApiCoreLegalEntityUpdateMutationOptions = <
 export type ApiCoreLegalEntityUpdateMutationResult = NonNullable<
   Awaited<ReturnType<typeof apiCoreLegalEntityUpdate>>
 >
-export type ApiCoreLegalEntityUpdateMutationBody = LegalEntity
+export type ApiCoreLegalEntityUpdateMutationBody = NonReadonly<LegalEntity>
 export type ApiCoreLegalEntityUpdateMutationError = ErrorType<unknown>
 
 export const useApiCoreLegalEntityUpdate = <
@@ -482,7 +510,7 @@ export const useApiCoreLegalEntityUpdate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof apiCoreLegalEntityUpdate>>,
       TError,
-      { id: number; data: LegalEntity },
+      { id: number; data: NonReadonly<LegalEntity> },
       TContext
     >
   },
@@ -490,7 +518,7 @@ export const useApiCoreLegalEntityUpdate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof apiCoreLegalEntityUpdate>>,
   TError,
-  { id: number; data: LegalEntity },
+  { id: number; data: NonReadonly<LegalEntity> },
   TContext
 > => {
   const mutationOptions = getApiCoreLegalEntityUpdateMutationOptions(options)
@@ -499,7 +527,7 @@ export const useApiCoreLegalEntityUpdate = <
 }
 export const apiCoreLegalEntityPartialUpdate = (
   id: number,
-  patchedLegalEntity: PatchedLegalEntity
+  patchedLegalEntity: NonReadonly<PatchedLegalEntity>
 ) => {
   return customInstance<LegalEntity>({
     url: `/api/core/legal_entity/${id}/`,
@@ -516,13 +544,13 @@ export const getApiCoreLegalEntityPartialUpdateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof apiCoreLegalEntityPartialUpdate>>,
     TError,
-    { id: number; data: PatchedLegalEntity },
+    { id: number; data: NonReadonly<PatchedLegalEntity> },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof apiCoreLegalEntityPartialUpdate>>,
   TError,
-  { id: number; data: PatchedLegalEntity },
+  { id: number; data: NonReadonly<PatchedLegalEntity> },
   TContext
 > => {
   const mutationKey = ['apiCoreLegalEntityPartialUpdate']
@@ -536,7 +564,7 @@ export const getApiCoreLegalEntityPartialUpdateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof apiCoreLegalEntityPartialUpdate>>,
-    { id: number; data: PatchedLegalEntity }
+    { id: number; data: NonReadonly<PatchedLegalEntity> }
   > = (props) => {
     const { id, data } = props ?? {}
 
@@ -549,7 +577,8 @@ export const getApiCoreLegalEntityPartialUpdateMutationOptions = <
 export type ApiCoreLegalEntityPartialUpdateMutationResult = NonNullable<
   Awaited<ReturnType<typeof apiCoreLegalEntityPartialUpdate>>
 >
-export type ApiCoreLegalEntityPartialUpdateMutationBody = PatchedLegalEntity
+export type ApiCoreLegalEntityPartialUpdateMutationBody =
+  NonReadonly<PatchedLegalEntity>
 export type ApiCoreLegalEntityPartialUpdateMutationError = ErrorType<unknown>
 
 export const useApiCoreLegalEntityPartialUpdate = <
@@ -560,7 +589,7 @@ export const useApiCoreLegalEntityPartialUpdate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof apiCoreLegalEntityPartialUpdate>>,
       TError,
-      { id: number; data: PatchedLegalEntity },
+      { id: number; data: NonReadonly<PatchedLegalEntity> },
       TContext
     >
   },
@@ -568,7 +597,7 @@ export const useApiCoreLegalEntityPartialUpdate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof apiCoreLegalEntityPartialUpdate>>,
   TError,
-  { id: number; data: PatchedLegalEntity },
+  { id: number; data: NonReadonly<PatchedLegalEntity> },
   TContext
 > => {
   const mutationOptions =

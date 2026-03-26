@@ -6,6 +6,7 @@ interface PaginationParams {
   page: number
   pageSize: number
   search?: string
+  clientId?: number
 }
 
 export const useLegalEntities = (params: PaginationParams) => {
@@ -13,6 +14,7 @@ export const useLegalEntities = (params: PaginationParams) => {
     name__icontains: params.search,
     page: params.page,
     page_size: params.pageSize,
+    client: params.clientId,
   }
   const { data, ...rest } = useApiCoreLegalEntityList(apiParams)
 

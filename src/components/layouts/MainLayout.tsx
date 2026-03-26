@@ -12,22 +12,22 @@ import {
   Landmark,
   CreditCard,
   ClipboardList,
-  Key,
-  TrendingUp,
-  GitMerge,
+  // Key,
+  // TrendingUp,
+  // GitMerge,
   Ticket,
-  MessageSquare,
+  // MessageSquare,
   ChevronRight,
   Database,
   Globe,
   Layers,
   // Clock,
   // Calendar,
-  FolderOpen,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Archive,
-  FileText,
+  // FolderOpen,
+  // ArrowDownLeft,
+  // ArrowUpRight,
+  // Archive,
+  // FileText,
 } from 'lucide-react'
 
 import {
@@ -56,11 +56,6 @@ const items: NavigationItem[] = [
     title: 'Clients',
     icon: <Users className="h-4 w-4" />,
     items: [
-      {
-        title: 'Client List',
-        url: '/clients/client-list',
-        icon: <Building2 className="h-4 w-4" />,
-      },
       {
         title: 'Legal Entities',
         url: '/clients/legal-entities',
@@ -127,57 +122,57 @@ const items: NavigationItem[] = [
     ],
   },
   { title: 'TVRs', url: '/tvrs', icon: <ClipboardList className="h-4 w-4" /> },
-  {
-    title: 'EFILE Credentials',
-    url: '/efile-credentials',
-    icon: <Key className="h-4 w-4" />,
-  },
-  {
-    title: 'Credit Carryfowards',
-    url: '/credit-carryfowards',
-    icon: <TrendingUp className="h-4 w-4" />,
-  },
-  {
-    title: 'Workflow',
-    url: '/workflow',
-    icon: <GitMerge className="h-4 w-4" />,
-  },
-  {
-    title: 'Client Folders',
-    icon: <FolderOpen className="h-4 w-4" />,
-    items: [
-      {
-        title: 'Inbound Data',
-        url: '/client-folders/inbound',
-        icon: <ArrowDownLeft className="h-4 w-4" />,
-      },
-      {
-        title: 'Outbound Data',
-        url: '/client-folders/outbound',
-        icon: <ArrowUpRight className="h-4 w-4" />,
-      },
-      {
-        title: 'Archived Returns',
-        url: '/client-folders/archived',
-        icon: <Archive className="h-4 w-4" />,
-      },
-      {
-        title: 'Client Documents',
-        url: '/client-folders/documents',
-        icon: <FileText className="h-4 w-4" />,
-      },
-    ],
-  },
+  // {
+  //   title: 'EFILE Credentials',
+  //   url: '/efile-credentials',
+  //   icon: <Key className="h-4 w-4" />,
+  // },
+  // {
+  //   title: 'Credit Carryfowards',
+  //   url: '/credit-carryfowards',
+  //   icon: <TrendingUp className="h-4 w-4" />,
+  // },
+  // {
+  //   title: 'Workflow',
+  //   url: '/workflow',
+  //   icon: <GitMerge className="h-4 w-4" />,
+  // },
+  // {
+  //   title: 'Client Folders',
+  //   icon: <FolderOpen className="h-4 w-4" />,
+  //   items: [
+  //     {
+  //       title: 'Inbound Data',
+  //       url: '/client-folders/inbound',
+  //       icon: <ArrowDownLeft className="h-4 w-4" />,
+  //     },
+  //     {
+  //       title: 'Outbound Data',
+  //       url: '/client-folders/outbound',
+  //       icon: <ArrowUpRight className="h-4 w-4" />,
+  //     },
+  //     {
+  //       title: 'Archived Returns',
+  //       url: '/client-folders/archived',
+  //       icon: <Archive className="h-4 w-4" />,
+  //     },
+  //     {
+  //       title: 'Client Documents',
+  //       url: '/client-folders/documents',
+  //       icon: <FileText className="h-4 w-4" />,
+  //     },
+  //   ],
+  // },
   {
     title: 'Support Tickets',
     url: '/support-tickets',
     icon: <Ticket className="h-4 w-4" />,
   },
-  {
-    title: 'Communications',
-    url: '/communications',
-    icon: <MessageSquare className="h-4 w-4" />,
-  },
+  // {
+  //   title: 'Communications',
+  //   url: '/communications',
+  //   icon: <MessageSquare className="h-4 w-4" />,
+  // },
 ]
 
 function NavMenuItem({

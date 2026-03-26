@@ -108,6 +108,18 @@ import {
 } from '@/components/ui/input-group'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import useDialog from '@/hooks/useDialog'
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from '@/components/ui/combobox'
 
 export default function DemoPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date())
@@ -174,6 +186,15 @@ export default function DemoPage() {
       ),
     },
   ]
+
+  const frameworks = [
+    'Next.js',
+    'SvelteKit',
+    'Nuxt.js',
+    'Remix',
+    'Astro',
+  ] as const
+  const anchor = useComboboxAnchor()
 
   return (
     <div className="min-h-screen space-y-12 bg-slate-50 p-8 dark:bg-zinc-950">
@@ -285,6 +306,36 @@ export default function DemoPage() {
                   { value: 'opt2', label: 'Staging Environment' },
                 ]}
               />
+              <Combobox
+                multiple
+                autoHighlight
+                items={frameworks}
+                defaultValue={[frameworks[0]]}
+              >
+                <ComboboxChips ref={anchor} className="w-full max-w-xs">
+                  <ComboboxValue>
+                    {(values) => (
+                      <React.Fragment>
+                        {values.map((value: string) => (
+                          <ComboboxChip key={value}>{value}</ComboboxChip>
+                        ))}
+                        <ComboboxChipsInput />
+                      </React.Fragment>
+                    )}
+                  </ComboboxValue>
+                </ComboboxChips>
+                <ComboboxContent anchor={anchor}>
+                  <ComboboxEmpty>No items found.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(item) => (
+                      <ComboboxItem key={item} value={item}>
+                        {item}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+
               <Textarea
                 label="Text Area"
                 placeholder="Detailed notes go here..."

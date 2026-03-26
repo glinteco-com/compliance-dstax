@@ -4,6 +4,7 @@
  */
 
 export interface PatchedClient {
+  readonly id?: number
   /** @maxLength 255 */
   name?: string
   is_active?: boolean

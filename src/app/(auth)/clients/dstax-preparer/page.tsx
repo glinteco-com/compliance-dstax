@@ -1,16 +1,11 @@
 'use client'
 
 import * as React from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import FormController from '@/components/form/FormController'
-import { CommonSelect } from '@/components/select/CommonSelect'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useColumnDstaxPreparer } from './hooks/useColumnDstaxPreparer'
@@ -24,28 +19,11 @@ import {
 } from '@/api/generated/core-user/core-user'
 import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
 import { PaginatedClientList } from '@/models/paginatedClientList'
-import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
-import { PaginatedLegalEntityList } from '@/models/paginatedLegalEntityList'
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer'
 import { Search, Plus } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
+import { PreparerDrawer } from './components/PreparerDrawer'
 
 type UserWithId = User & { id: number }
-
-const formSchema = z.object({
-  managed_client: z.string().optional(),
-  assigned_legal_entity_ids: z.string().optional(),
-})
-
-type FormValues = z.infer<typeof formSchema>
 
 export default function PreparersPage() {
   const queryClient = useQueryClient()
@@ -106,22 +84,6 @@ export default function PreparersPage() {
     return map
   }, [clients])
 
-  const { data: legalEntitiesData } = useApiCoreLegalEntityList({
-    page: 1,
-    page_size: 100,
-  })
-
-  const legalEntities = ((
-    legalEntitiesData as unknown as PaginatedLegalEntityList
-  )?.results ?? []) as unknown as { id: number; name: string }[]
-
-  const legalEntityOptions = legalEntities
-    .filter((le) => le.id != null)
-    .map((le) => ({
-      value: String(le.id),
-      label: le.name,
-    }))
-
   const paginatedData = (data?.results ?? []) as UserWithId[]
   const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
 
@@ -178,14 +140,6 @@ export default function PreparersPage() {
       },
     })
 
-  const { control, reset, handleSubmit } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      managed_client: '',
-      assigned_legal_entity_ids: '',
-    },
-  })
-
   const openDrawer = (
     mode: 'create' | 'edit' | 'view',
     item: UserWithId | null = null
@@ -195,39 +149,30 @@ export default function PreparersPage() {
     }
     setDrawerMode(mode)
     setSelectedItem(item)
-
-    if (mode === 'edit' && item) {
-      reset({
-        managed_client: item.managed_client ? String(item.managed_client) : '',
-        assigned_legal_entity_ids: item.assigned_legal_entity_ids?.length
-          ? String(item.assigned_legal_entity_ids[0])
-          : '',
-      })
-    } else if (mode === 'create') {
-      reset({
-        managed_client: '',
-        assigned_legal_entity_ids: '',
-      })
-    }
-
     setIsDrawerOpen(true)
   }
 
-  const onSubmit = (formData: FormValues) => {
-    const entityId = formData.assigned_legal_entity_ids
-      ? Number(formData.assigned_legal_entity_ids)
-      : null
+  const handleDrawerSubmit = (
+    formData: {
+      managed_client?: string
+      assigned_legal_entity_ids?: string[]
+    },
+    mode: 'create' | 'edit'
+  ) => {
     const payload = {
       role: 'DSTAX_PREPARER' as const,
       managed_client: formData.managed_client
         ? Number(formData.managed_client)
         : null,
-      assigned_legal_entity_ids: entityId && !isNaN(entityId) ? [entityId] : [],
+      assigned_legal_entity_ids:
+        formData.assigned_legal_entity_ids
+          ?.map(Number)
+          .filter((id) => !isNaN(id)) ?? [],
     }
 
-    if (drawerMode === 'create') {
+    if (mode === 'create') {
       createPreparer({ data: payload as any })
-    } else if (drawerMode === 'edit' && selectedItem) {
+    } else if (mode === 'edit' && selectedItem) {
       updatePreparer({
         id: selectedItem.id,
         data: payload as any,
@@ -297,121 +242,16 @@ export default function PreparersPage() {
         }}
       />
 
-      <Drawer
+      <PreparerDrawer
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
-        direction="right"
-      >
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>
-              {drawerMode === 'create' && 'Add Preparer'}
-              {drawerMode === 'edit' && 'Edit Preparer'}
-              {drawerMode === 'view' && 'Preparer Details'}
-            </DrawerTitle>
-            <DrawerDescription>
-              {drawerMode === 'create' &&
-                'Enter the details of the new preparer.'}
-              {drawerMode === 'edit' &&
-                'Update the details of the selected preparer.'}
-              {drawerMode === 'view' &&
-                'Here are the details of the selected preparer.'}
-            </DrawerDescription>
-          </DrawerHeader>
-
-          <div className="flex-1 overflow-auto p-4">
-            {drawerMode === 'view' && selectedItem && (
-              <div className="space-y-4 text-sm">
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    ID
-                  </span>
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {selectedItem.id}
-                  </span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    Role
-                  </span>
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    DSTax Preparer
-                  </span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    Managed Client
-                  </span>
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {selectedItem.managed_client
-                      ? (clientMap[selectedItem.managed_client] ??
-                        selectedItem.managed_client)
-                      : '—'}
-                  </span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    Assigned Legal Entities
-                  </span>
-                  {selectedItem.assigned_legal_entities?.length ? (
-                    <ul className="list-disc pl-5 text-zinc-600 dark:text-zinc-400">
-                      {selectedItem.assigned_legal_entities.map((le) => (
-                        <li key={le.name}>{le.name}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="text-zinc-600 dark:text-zinc-400">—</span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {(drawerMode === 'create' || drawerMode === 'edit') && (
-              <form
-                id="preparer-form"
-                onSubmit={handleSubmit(onSubmit)}
-                className="mt-2 space-y-4"
-              >
-                <FormController
-                  control={control}
-                  name="managed_client"
-                  Field={CommonSelect}
-                  fieldProps={{
-                    label: 'Managed Client',
-                    placeholder: 'Select a client',
-                    options: clientOptions,
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="assigned_legal_entity_ids"
-                  Field={CommonSelect}
-                  fieldProps={{
-                    label: 'Assigned Legal Entity',
-                    placeholder: 'Select a legal entity',
-                    options: legalEntityOptions,
-                  }}
-                />
-              </form>
-            )}
-          </div>
-
-          <DrawerFooter>
-            {(drawerMode === 'create' || drawerMode === 'edit') && (
-              <Button
-                type="submit"
-                form="preparer-form"
-                disabled={isCreating || isUpdating}
-              >
-                {isCreating || isUpdating ? 'Saving...' : 'Save'}
-              </Button>
-            )}
-            <DrawerClose asChild>
-              <Button variant="outline">Close</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+        mode={drawerMode}
+        selectedItem={selectedItem}
+        clientOptions={clientOptions}
+        clientMap={clientMap}
+        onSubmit={handleDrawerSubmit}
+        isSaving={isCreating || isUpdating}
+      />
 
       <ConfirmDialog
         isOpen={isOpenDeleteDialog}

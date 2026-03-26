@@ -28,6 +28,34 @@ import type {
 import { customInstance } from '../../mutator/custom-instance'
 import type { ErrorType } from '../../mutator/custom-instance'
 
+// https://stackoverflow.com/questions/49579094/typescript-conditional-types-filter-out-readonly-properties-pick-only-requir/49579497#49579497
+type IfEquals<X, Y, A = X, B = never> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? A : B
+
+type WritableKeys<T> = {
+  [P in keyof T]-?: IfEquals<
+    { [Q in P]: T[P] },
+    { -readonly [Q in P]: T[P] },
+    P
+  >
+}[keyof T]
+
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+  k: infer I
+) => void
+  ? I
+  : never
+type DistributeReadOnlyOverUnions<T> = T extends any ? NonReadonly<T> : never
+
+type Writable<T> = Pick<T, WritableKeys<T>>
+type NonReadonly<T> = [T] extends [UnionToIntersection<T>]
+  ? {
+      [P in keyof Writable<T>]: T[P] extends object
+        ? NonReadonly<NonNullable<T[P]>>
+        : T[P]
+    }
+  : DistributeReadOnlyOverUnions<T>
+
 export const apiCoreClientList = (
   params?: ApiCoreClientListParams,
   signal?: AbortSignal
@@ -183,7 +211,10 @@ export function useApiCoreClientList<
   return query
 }
 
-export const apiCoreClientCreate = (client: Client, signal?: AbortSignal) => {
+export const apiCoreClientCreate = (
+  client: NonReadonly<Client>,
+  signal?: AbortSignal
+) => {
   return customInstance<Client>({
     url: `/api/core/client/`,
     method: 'POST',
@@ -200,13 +231,13 @@ export const getApiCoreClientCreateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof apiCoreClientCreate>>,
     TError,
-    { data: Client },
+    { data: NonReadonly<Client> },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof apiCoreClientCreate>>,
   TError,
-  { data: Client },
+  { data: NonReadonly<Client> },
   TContext
 > => {
   const mutationKey = ['apiCoreClientCreate']
@@ -220,7 +251,7 @@ export const getApiCoreClientCreateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof apiCoreClientCreate>>,
-    { data: Client }
+    { data: NonReadonly<Client> }
   > = (props) => {
     const { data } = props ?? {}
 
@@ -233,7 +264,7 @@ export const getApiCoreClientCreateMutationOptions = <
 export type ApiCoreClientCreateMutationResult = NonNullable<
   Awaited<ReturnType<typeof apiCoreClientCreate>>
 >
-export type ApiCoreClientCreateMutationBody = Client
+export type ApiCoreClientCreateMutationBody = NonReadonly<Client>
 export type ApiCoreClientCreateMutationError = ErrorType<unknown>
 
 export const useApiCoreClientCreate = <
@@ -244,7 +275,7 @@ export const useApiCoreClientCreate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof apiCoreClientCreate>>,
       TError,
-      { data: Client },
+      { data: NonReadonly<Client> },
       TContext
     >
   },
@@ -252,7 +283,7 @@ export const useApiCoreClientCreate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof apiCoreClientCreate>>,
   TError,
-  { data: Client },
+  { data: NonReadonly<Client> },
   TContext
 > => {
   const mutationOptions = getApiCoreClientCreateMutationOptions(options)
@@ -413,7 +444,10 @@ export function useApiCoreClientRetrieve<
   return query
 }
 
-export const apiCoreClientUpdate = (id: number, client: Client) => {
+export const apiCoreClientUpdate = (
+  id: number,
+  client: NonReadonly<Client>
+) => {
   return customInstance<Client>({
     url: `/api/core/client/${id}/`,
     method: 'PUT',
@@ -429,13 +463,13 @@ export const getApiCoreClientUpdateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof apiCoreClientUpdate>>,
     TError,
-    { id: number; data: Client },
+    { id: number; data: NonReadonly<Client> },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof apiCoreClientUpdate>>,
   TError,
-  { id: number; data: Client },
+  { id: number; data: NonReadonly<Client> },
   TContext
 > => {
   const mutationKey = ['apiCoreClientUpdate']
@@ -449,7 +483,7 @@ export const getApiCoreClientUpdateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof apiCoreClientUpdate>>,
-    { id: number; data: Client }
+    { id: number; data: NonReadonly<Client> }
   > = (props) => {
     const { id, data } = props ?? {}
 
@@ -462,7 +496,7 @@ export const getApiCoreClientUpdateMutationOptions = <
 export type ApiCoreClientUpdateMutationResult = NonNullable<
   Awaited<ReturnType<typeof apiCoreClientUpdate>>
 >
-export type ApiCoreClientUpdateMutationBody = Client
+export type ApiCoreClientUpdateMutationBody = NonReadonly<Client>
 export type ApiCoreClientUpdateMutationError = ErrorType<unknown>
 
 export const useApiCoreClientUpdate = <
@@ -473,7 +507,7 @@ export const useApiCoreClientUpdate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof apiCoreClientUpdate>>,
       TError,
-      { id: number; data: Client },
+      { id: number; data: NonReadonly<Client> },
       TContext
     >
   },
@@ -481,7 +515,7 @@ export const useApiCoreClientUpdate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof apiCoreClientUpdate>>,
   TError,
-  { id: number; data: Client },
+  { id: number; data: NonReadonly<Client> },
   TContext
 > => {
   const mutationOptions = getApiCoreClientUpdateMutationOptions(options)
@@ -490,7 +524,7 @@ export const useApiCoreClientUpdate = <
 }
 export const apiCoreClientPartialUpdate = (
   id: number,
-  patchedClient: PatchedClient
+  patchedClient: NonReadonly<PatchedClient>
 ) => {
   return customInstance<Client>({
     url: `/api/core/client/${id}/`,
@@ -507,13 +541,13 @@ export const getApiCoreClientPartialUpdateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof apiCoreClientPartialUpdate>>,
     TError,
-    { id: number; data: PatchedClient },
+    { id: number; data: NonReadonly<PatchedClient> },
     TContext
   >
 }): UseMutationOptions<
   Awaited<ReturnType<typeof apiCoreClientPartialUpdate>>,
   TError,
-  { id: number; data: PatchedClient },
+  { id: number; data: NonReadonly<PatchedClient> },
   TContext
 > => {
   const mutationKey = ['apiCoreClientPartialUpdate']
@@ -527,7 +561,7 @@ export const getApiCoreClientPartialUpdateMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof apiCoreClientPartialUpdate>>,
-    { id: number; data: PatchedClient }
+    { id: number; data: NonReadonly<PatchedClient> }
   > = (props) => {
     const { id, data } = props ?? {}
 
@@ -540,7 +574,7 @@ export const getApiCoreClientPartialUpdateMutationOptions = <
 export type ApiCoreClientPartialUpdateMutationResult = NonNullable<
   Awaited<ReturnType<typeof apiCoreClientPartialUpdate>>
 >
-export type ApiCoreClientPartialUpdateMutationBody = PatchedClient
+export type ApiCoreClientPartialUpdateMutationBody = NonReadonly<PatchedClient>
 export type ApiCoreClientPartialUpdateMutationError = ErrorType<unknown>
 
 export const useApiCoreClientPartialUpdate = <
@@ -551,7 +585,7 @@ export const useApiCoreClientPartialUpdate = <
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof apiCoreClientPartialUpdate>>,
       TError,
-      { id: number; data: PatchedClient },
+      { id: number; data: NonReadonly<PatchedClient> },
       TContext
     >
   },
@@ -559,7 +593,7 @@ export const useApiCoreClientPartialUpdate = <
 ): UseMutationResult<
   Awaited<ReturnType<typeof apiCoreClientPartialUpdate>>,
   TError,
-  { id: number; data: PatchedClient },
+  { id: number; data: NonReadonly<PatchedClient> },
   TContext
 > => {
   const mutationOptions = getApiCoreClientPartialUpdateMutationOptions(options)
