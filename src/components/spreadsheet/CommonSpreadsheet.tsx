@@ -69,7 +69,7 @@ export function CommonSpreadsheet({
   return (
     <div
       className={cn(
-        'bg-background relative min-h-0 w-full flex-1 rounded-md shadow-sm',
+        'bg-background relative min-h-0 w-full flex-1 overflow-hidden rounded-md shadow-sm',
         className
       )}
     >
