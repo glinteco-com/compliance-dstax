@@ -1,4 +1,4 @@
-import { getAuthToken } from '@/lib/cookies'
+import { Cookies, getAuthToken } from '@/lib/cookies'
 import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
@@ -19,11 +19,26 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 60000, // 60 seconds timeout
 })
 
+let isRefreshing = false
+let failedQueue: {
+  resolve: (token: string) => void
+  reject: (error: unknown) => void
+}[] = []
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token!)
+    }
+  })
+  failedQueue = []
+}
+
 // Request interceptor for adding auth tokens or other headers
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get the session token from cookies
-    // better-auth uses 'better-auth.session_token' by default
     const token =
       getAuthToken() || (getCookie('better-auth.session_token') as string)
 
@@ -38,29 +53,85 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Response interceptor for global error handling
+// Response interceptor with automatic token refresh
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response
   },
-  (error: AxiosError) => {
-    // Handle specific status codes
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean
+    }
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      originalRequest.url !== '/api/token/refresh/'
+    ) {
+      if (isRefreshing) {
+        return new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`
+          return apiClient(originalRequest)
+        })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      const refreshToken = Cookies.get('refreshToken') as string
+
+      if (!refreshToken) {
+        isRefreshing = false
+        Cookies.remove('token')
+        Cookies.remove('refreshToken')
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+        return Promise.reject(error)
+      }
+
+      try {
+        const { data } = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/token/refresh/`,
+          { refresh: refreshToken }
+        )
+
+        const newAccessToken = data.access
+        Cookies.set('token', newAccessToken)
+
+        if (data.refresh) {
+          Cookies.set('refreshToken', data.refresh)
+        }
+
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        processQueue(null, newAccessToken)
+
+        return apiClient(originalRequest)
+      } catch (refreshError) {
+        processQueue(refreshError, null)
+        Cookies.remove('token')
+        Cookies.remove('refreshToken')
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
+      }
+    }
+
     if (error.response) {
       const { status } = error.response
-
-      if (status === 401) {
-        // Unauthorized: clear auth state or redirect to login
-        console.warn('Unauthorized access - redirecting to login')
-      } else if (status === 403) {
+      if (status === 403) {
         console.error('Permission denied')
       } else if (status >= 500) {
         console.error('Server error occurred')
       }
     } else if (error.request) {
-      // Request was made but no response received
       console.error('Network error - no response received')
     } else {
-      // Something else happened while setting up the request
       console.error('Error setting up request:', error.message)
     }
 
