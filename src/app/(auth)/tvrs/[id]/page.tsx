@@ -3,19 +3,17 @@
 import { useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import {
-  CommonSpreadsheet,
-  type CellEditEvent,
-} from '@/components/spreadsheet/CommonSpreadsheet'
+import { SpreadsheetGrid } from '@/components/spreadsheet/SpreadsheetGrid'
 import { CommonSelect } from '@/components/select/CommonSelect'
 import { ArrowLeft } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
+import { toast } from 'sonner'
 import {
   mockClients,
   mockTvrData,
   getFilterOptions,
-  colHeaders,
-  spreadsheetColumns,
+  gridColumns,
+  editableTvrColumns,
 } from '../mock-data'
 
 export default function TVRDetailPage() {
@@ -23,8 +21,10 @@ export default function TVRDetailPage() {
   const router = useRouter()
 
   const client = mockClients.find((c) => c.id === params.id)
-  const allRows = mockTvrData[params.id] || []
-  const filterOptions = getFilterOptions(allRows)
+  const [rows, setRows] = useState(mockTvrData[params.id] || [])
+  const [changedRowIds, setChangedRowIds] = useState<Set<string>>(new Set())
+  const [isPreparing, setIsPreparing] = useState(false)
+  const filterOptions = getFilterOptions(rows)
 
   const [filterLegalEntity, setFilterLegalEntity] = useState('')
   const [filterJurisdiction, setFilterJurisdiction] = useState('')
@@ -32,11 +32,38 @@ export default function TVRDetailPage() {
   const [filterFilingFrequency, setFilterFilingFrequency] = useState('')
   const [filterFilingType, setFilterFilingType] = useState('')
 
-  const handleCellEdit = useCallback((event: CellEditEvent) => {
-    console.log('Cell edited:', event)
-  }, [])
+  const handleCellChange = useCallback(
+    (rowIndex: number, columnId: string, value: unknown) => {
+      setRows((prev) => {
+        const next = [...prev]
+        const row = next[rowIndex]
+        next[rowIndex] = { ...row, [columnId]: value }
+        setChangedRowIds((ids) => new Set(ids).add(row.id))
+        return next
+      })
+    },
+    []
+  )
 
-  const filteredRows = allRows.filter((row) => {
+  const handlePrepared = useCallback(async () => {
+    if (changedRowIds.size === 0) {
+      toast.info('No changes to submit.')
+      return
+    }
+    setIsPreparing(true)
+    const changedRows = rows.filter((r) => changedRowIds.has(r.id))
+    // Mock API call — log changed row IDs and data
+    console.log(
+      'Submitting prepared rows:',
+      changedRows.map((r) => ({ id: r.id }))
+    )
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    toast.success(`${changedRows.length} row(s) marked as prepared.`)
+    setChangedRowIds(new Set())
+    setIsPreparing(false)
+  }, [changedRowIds, rows])
+
+  const filteredRows = rows.filter((row) => {
     if (filterLegalEntity && row.legalEntity !== filterLegalEntity) return false
     if (filterJurisdiction && row.jurisdiction !== filterJurisdiction)
       return false
@@ -63,7 +90,7 @@ export default function TVRDetailPage() {
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-4 overflow-hidden">
+    <div className="flex h-full w-full min-w-0 flex-col space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <CommonTooltip content="Back to client list">
@@ -80,14 +107,25 @@ export default function TVRDetailPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="default">PREPARED</Button>
-          <Button variant="secondary">REVIEW COMMENTS</Button>
+          <Button
+            variant="default"
+            onClick={handlePrepared}
+            disabled={isPreparing || changedRowIds.size === 0}
+          >
+            {isPreparing ? 'Submitting...' : 'PREPARED'}
+            {changedRowIds.size > 0 && (
+              <span className="ml-1.5 rounded-full bg-white/20 px-1.5 text-xs">
+                {changedRowIds.size}
+              </span>
+            )}
+          </Button>
+          {/* <Button variant="secondary">REVIEW COMMENTS</Button>
           <Button variant="outline">PUBLISH RETURNS</Button>
-          <Button variant="default">FUNDING RECEIVED</Button>
+          <Button variant="default">FUNDING RECEIVED</Button> */}
         </div>
       </div>
 
-      <div className="relative z-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="relative z-10 grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <CommonSelect
           placeholder="All Legal Entities"
           options={filterOptions.legalEntities}
@@ -120,13 +158,16 @@ export default function TVRDetailPage() {
         />
       </div>
 
-      <CommonSpreadsheet
-        data={filteredRows}
-        columns={spreadsheetColumns}
-        colHeaders={colHeaders}
-        rowHeaders={true}
-        onCellEdit={handleCellEdit}
-      />
+      <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto">
+        <SpreadsheetGrid
+          columns={gridColumns}
+          data={filteredRows}
+          editableColumns={editableTvrColumns}
+          onChange={handleCellChange}
+          className="h-full w-full"
+          emptyMessage="No tax records match the current filters."
+        />
+      </div>
     </div>
   )
 }

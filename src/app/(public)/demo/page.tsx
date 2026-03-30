@@ -107,6 +107,11 @@ import {
   InputGroupTextarea,
 } from '@/components/ui/input-group'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
+import {
+  SpreadsheetGrid,
+  type SpreadsheetColumn,
+  type CellValue,
+} from '@/components/spreadsheet/SpreadsheetGrid'
 import useDialog from '@/hooks/useDialog'
 import {
   Combobox,
@@ -132,6 +137,64 @@ export default function DemoPage() {
     await new Promise((r) => setTimeout(r, 1000))
     setIsLoading(false)
     onCloseDialog()
+  }
+
+  const spreadsheetColumns: SpreadsheetColumn[] = [
+    { id: 'code', label: 'Code', width: 100 },
+    { id: 'description', label: 'Description', width: 200 },
+    { id: 'amount', label: 'Amount', width: 120 },
+    { id: 'tax_rate', label: 'Tax Rate', width: 100 },
+    { id: 'status', label: 'Status', width: 120 },
+  ]
+
+  const [spreadsheetData, setSpreadsheetData] = React.useState([
+    {
+      code: 'TX-001',
+      description: 'Corporate income tax',
+      amount: '150,000',
+      tax_rate: '20%',
+      status: 'Submitted',
+    },
+    {
+      code: 'TX-002',
+      description: 'VAT quarterly return',
+      amount: '45,200',
+      tax_rate: '7%',
+      status: 'Draft',
+    },
+    {
+      code: 'TX-003',
+      description: 'Withholding tax',
+      amount: '12,800',
+      tax_rate: '3%',
+      status: 'Pending',
+    },
+    {
+      code: '',
+      description: '',
+      amount: '',
+      tax_rate: '',
+      status: '',
+    },
+  ])
+
+  const handleSpreadsheetChange = (
+    rowIndex: number,
+    columnId: string,
+    value: CellValue
+  ) => {
+    setSpreadsheetData((prev) => {
+      const next = [...prev]
+      next[rowIndex] = { ...next[rowIndex], [columnId]: value }
+      return next
+    })
+  }
+
+  const handleAddRow = () => {
+    setSpreadsheetData((prev) => [
+      ...prev,
+      { code: '', description: '', amount: '', tax_rate: '', status: '' },
+    ])
   }
 
   const tableData = [
@@ -655,6 +718,43 @@ export default function DemoPage() {
                 </div>
               </div>
             </CardContent>
+          </Card>
+        </section>
+
+        {/* SPREADSHEET GRID SECTION */}
+        <section className="col-span-1 space-y-6 md:col-span-2">
+          <h2 className="flex items-center gap-2 text-2xl font-bold">
+            Spreadsheet Grid{' '}
+            <span className="rounded bg-orange-100 px-2 py-0.5 text-sm font-normal text-orange-600">
+              column-level permissions
+            </span>
+          </h2>
+          <Card className="border-none shadow-sm ring-1 ring-zinc-200">
+            <CardHeader>
+              <CardTitle>Tax Records</CardTitle>
+              <CardDescription>
+                Only &quot;Amount&quot; and &quot;Status&quot; columns are
+                editable. Other columns are read-only.
+              </CardDescription>
+              <CardAction>
+                <Button variant="outline" size="sm" onClick={handleAddRow}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Row
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <SpreadsheetGrid
+                columns={spreadsheetColumns}
+                data={spreadsheetData}
+                editableColumns={['amount', 'status']}
+                onChange={handleSpreadsheetChange}
+                onAddRow={handleAddRow}
+              />
+            </CardContent>
+            <CardFooter className="text-xs text-zinc-400">
+              Use Tab / Enter / Arrow keys to navigate between editable cells.
+            </CardFooter>
           </Card>
         </section>
 
