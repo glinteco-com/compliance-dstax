@@ -1,4 +1,4 @@
-import type { CustomColumnSettings } from '@/components/spreadsheet/CommonSpreadsheet'
+import type { SpreadsheetColumn } from '@/components/spreadsheet/SpreadsheetGrid'
 
 // --- Types ---
 
@@ -9,6 +9,7 @@ export interface TVRClient {
 }
 
 export interface TVRRow {
+  id: string
   legalEntity: string
   jurisdiction: string
   taxType: string
@@ -86,6 +87,7 @@ export const mockClients: TVRClient[] = [
 export const mockTvrData: Record<string, TVRRow[]> = {
   '1': [
     {
+      id: 'tvr-1-1',
       legalEntity: 'Acme US LLC',
       jurisdiction: 'CA',
       taxType: 'Sales Tax',
@@ -123,6 +125,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-1-2',
       legalEntity: 'Acme US LLC',
       jurisdiction: 'NY',
       taxType: 'Use Tax',
@@ -160,6 +163,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-1-3',
       legalEntity: 'Acme EU GmbH',
       jurisdiction: 'DE',
       taxType: 'VAT',
@@ -197,6 +201,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-1-4',
       legalEntity: 'Acme Asia Pte Ltd',
       jurisdiction: 'SG',
       taxType: 'GST',
@@ -236,6 +241,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
   ],
   '2': [
     {
+      id: 'tvr-2-1',
       legalEntity: 'Techy NY Corp',
       jurisdiction: 'NY',
       taxType: 'Use Tax',
@@ -273,6 +279,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-2-2',
       legalEntity: 'Techy UK Ltd',
       jurisdiction: 'GB',
       taxType: 'VAT',
@@ -312,6 +319,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
   ],
   '3': [
     {
+      id: 'tvr-3-1',
       legalEntity: 'Global US Inc',
       jurisdiction: 'TX',
       taxType: 'Sales Tax',
@@ -349,6 +357,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-3-2',
       legalEntity: 'Global Canada Corp',
       jurisdiction: 'ON',
       taxType: 'GST',
@@ -386,6 +395,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-3-3',
       legalEntity: 'Global Mexico SA',
       jurisdiction: 'MX',
       taxType: 'VAT',
@@ -423,6 +433,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-3-4',
       legalEntity: 'Global Brazil Ltda',
       jurisdiction: 'BR',
       taxType: 'VAT',
@@ -462,6 +473,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
   ],
   '4': [
     {
+      id: 'tvr-4-1',
       legalEntity: 'Summit NA LLC',
       jurisdiction: 'FL',
       taxType: 'Sales Tax',
@@ -499,6 +511,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
       isActive: true,
     },
     {
+      id: 'tvr-4-2',
       legalEntity: 'Summit EU BV',
       jurisdiction: 'NL',
       taxType: 'VAT',
@@ -538,6 +551,7 @@ export const mockTvrData: Record<string, TVRRow[]> = {
   ],
   '5': [
     {
+      id: 'tvr-5-1',
       legalEntity: 'Apex US LLC',
       jurisdiction: 'WA',
       taxType: 'Sales Tax',
@@ -597,112 +611,91 @@ export function getFilterOptions(rows: TVRRow[]) {
 
 // --- Spreadsheet column config ---
 
-export const colHeaders = [
-  'Legal Entity',
-  'Jurisdiction',
-  'Tax Type',
-  'Filing Frequency',
-  'Filing Method',
-  'Due Date',
-  'De Time',
-  'G/L Amount',
-  'Sales Tax Extract Amount',
-  'Amount to Adjust',
-  'Manual Adjustment (Client Provided)',
-  'Use Tax (Sales & Use Tax Extract)',
-  'Non-Monthly Return Carried Forward from Prior Periods',
-  'Non-Monthly Return Carried Forward to Future Prior Periods',
-  'Credits Carried Forward from Prior Periods',
-  'Credits Carried Forward to Future Periods',
-  'Local Adjustment',
-  'Gross Due',
-  'Prepayment Credit',
-  'Prepayment Due',
-  "Vendor's Discount",
-  'Business & Occupation Tax',
-  'Rounding',
-  'Currency Converted',
-  'Net Due',
-  'Currency Code',
-  'Amount to Fund',
-  'Status/Confirmation Number',
-  'Payment Confirmation Number',
-  'Payment Amount',
-  'Filing Date',
-  'Payment Date',
-  'Client Comment',
-  'DSTax Comment',
-  'Active?',
-]
-
-const currencyCol = (data: string): CustomColumnSettings => ({
-  data,
-  type: 'numeric' as const,
-  numericFormat: {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  },
+const currencyCol = (id: string, label: string): SpreadsheetColumn => ({
+  id,
+  label,
+  type: 'currency',
+  width: 160,
 })
 
-export const spreadsheetColumns: CustomColumnSettings[] = [
-  { data: 'legalEntity', type: 'text', readOnly: true },
-  { data: 'jurisdiction', type: 'text', readOnly: true },
+export const gridColumns: SpreadsheetColumn[] = [
+  { id: 'legalEntity', label: 'Legal Entity', width: 180, readOnly: true },
+  { id: 'jurisdiction', label: 'Jurisdiction', width: 110, readOnly: true },
+  { id: 'taxType', label: 'Tax Type', width: 120 },
+  { id: 'filingFrequency', label: 'Filing Frequency', width: 140 },
+  { id: 'filingMethod', label: 'Filing Method', width: 120 },
+  { id: 'dueDate', label: 'Due Date', type: 'date', width: 120 },
+  { id: 'deTime', label: 'De Time', width: 100 },
+  currencyCol('glAmount', 'G/L Amount'),
+  currencyCol('salesTaxExtractAmount', 'Sales Tax Extract Amount'),
+  currencyCol('amountToAdjust', 'Amount to Adjust'),
+  currencyCol('manualAdjustment', 'Manual Adjustment (Client Provided)'),
+  currencyCol('useTax', 'Use Tax (Sales & Use Tax Extract)'),
+  currencyCol(
+    'nonMonthlyCarriedForwardPrior',
+    'Non-Monthly CF from Prior Periods'
+  ),
+  currencyCol(
+    'nonMonthlyCarriedForwardFuture',
+    'Non-Monthly CF to Future Periods'
+  ),
+  currencyCol('creditsCarriedForwardPrior', 'Credits CF from Prior Periods'),
+  currencyCol('creditsCarriedForwardFuture', 'Credits CF to Future Periods'),
+  currencyCol('localAdjustment', 'Local Adjustment'),
+  currencyCol('grossDue', 'Gross Due'),
+  currencyCol('prepaymentCredit', 'Prepayment Credit'),
+  currencyCol('prepaymentDue', 'Prepayment Due'),
+  currencyCol('vendorsDiscount', "Vendor's Discount"),
+  currencyCol('businessAndOccupationTax', 'Business & Occupation Tax'),
+  currencyCol('rounding', 'Rounding'),
+  currencyCol('currencyConverted', 'Currency Converted'),
+  currencyCol('netDue', 'Net Due'),
+  { id: 'currencyCode', label: 'Currency Code', width: 120 },
+  currencyCol('amountToFund', 'Amount to Fund'),
   {
-    data: 'taxType',
-    type: 'dropdown' as const,
-    source: ['Sales Tax', 'Use Tax', 'VAT', 'GST'],
+    id: 'statusConfirmationNumber',
+    label: 'Status/Confirmation #',
+    width: 180,
   },
   {
-    data: 'filingFrequency',
-    type: 'dropdown' as const,
-    source: ['Monthly', 'Quarterly', 'Annual'],
+    id: 'paymentConfirmationNumber',
+    label: 'Payment Confirmation #',
+    width: 180,
   },
-  { data: 'filingMethod', type: 'text' },
+  currencyCol('paymentAmount', 'Payment Amount'),
+  { id: 'filingDate', label: 'Filing Date', type: 'date', width: 120 },
+  { id: 'paymentDate', label: 'Payment Date', type: 'date', width: 120 },
+  { id: 'clientComment', label: 'Client Comment', width: 200 },
+  { id: 'dstaxComment', label: 'DSTax Comment', width: 200 },
   {
-    data: 'dueDate',
-    type: 'intl-date' as const,
-    dateFormat: { year: 'numeric', month: '2-digit', day: '2-digit' },
+    id: 'isActive',
+    label: 'Active?',
+    type: 'checkbox',
+    width: 80,
+    align: 'center',
   },
-  {
-    data: 'deTime',
-    type: 'intl-time' as const,
-    timeFormat: { hour: 'numeric', minute: '2-digit', hour12: true },
-  },
-  currencyCol('glAmount'),
-  currencyCol('salesTaxExtractAmount'),
-  currencyCol('amountToAdjust'),
-  currencyCol('manualAdjustment'),
-  currencyCol('useTax'),
-  currencyCol('nonMonthlyCarriedForwardPrior'),
-  currencyCol('nonMonthlyCarriedForwardFuture'),
-  currencyCol('creditsCarriedForwardPrior'),
-  currencyCol('creditsCarriedForwardFuture'),
-  currencyCol('localAdjustment'),
-  currencyCol('grossDue'),
-  currencyCol('prepaymentCredit'),
-  currencyCol('prepaymentDue'),
-  currencyCol('vendorsDiscount'),
-  currencyCol('businessAndOccupationTax'),
-  currencyCol('rounding'),
-  currencyCol('currencyConverted'),
-  currencyCol('netDue'),
-  { data: 'currencyCode', type: 'text' },
-  currencyCol('amountToFund'),
-  { data: 'statusConfirmationNumber', type: 'text' },
-  { data: 'paymentConfirmationNumber', type: 'text' },
-  currencyCol('paymentAmount'),
-  {
-    data: 'filingDate',
-    type: 'intl-date' as const,
-    dateFormat: { year: 'numeric', month: '2-digit', day: '2-digit' },
-  },
-  {
-    data: 'paymentDate',
-    type: 'intl-date' as const,
-    dateFormat: { year: 'numeric', month: '2-digit', day: '2-digit' },
-  },
-  { data: 'clientComment', type: 'text' },
-  { data: 'dstaxComment', type: 'text' },
-  { data: 'isActive', type: 'checkbox' },
+]
+
+// Only these columns are editable on the TVR detail screen
+export const editableTvrColumns: string[] = [
+  'glAmount',
+  'salesTaxExtractAmount',
+  'manualAdjustment',
+  'useTax',
+  'creditsCarriedForwardPrior',
+  'creditsCarriedForwardFuture',
+  'localAdjustment',
+  'prepaymentDue',
+  'vendorsDiscount',
+  'businessAndOccupationTax',
+  'rounding',
+  'currencyConverted',
+  'statusConfirmationNumber',
+  'paymentConfirmationNumber',
+  'paymentAmount',
+  'filingDate',
+  'paymentDate',
+  'clientComment',
+  'dstaxComment',
+  'isActive',
 ]
