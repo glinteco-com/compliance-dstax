@@ -100,6 +100,7 @@ export default function TVRsPage() {
         columns={columns}
         data={filteredClients}
         emptyMessage="No clients with TVRs this month"
+        onRowClick={(record) => router.push(`/tvrs/${record.id}`)}
       />
     </div>
   )

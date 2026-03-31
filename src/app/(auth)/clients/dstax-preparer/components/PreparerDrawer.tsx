@@ -79,17 +79,6 @@ export function PreparerDrawer({
     clientId: managedClient ? Number(managedClient) : undefined,
   })
 
-  const legalEntityOptions = React.useMemo(
-    () =>
-      (legalEntitiesData?.results ?? [])
-        .filter((le: { id?: number }) => le.id != null)
-        .map((le: { id: number; name: string }) => ({
-          value: String(le.id),
-          label: le.name,
-        })),
-    [legalEntitiesData]
-  )
-
   React.useEffect(() => {
     if (!open) return
 
@@ -109,6 +98,26 @@ export function PreparerDrawer({
     })
 
   const detail = preparerDetail as unknown as UserWithId | undefined
+
+  const legalEntityOptions = React.useMemo(() => {
+    const fromData = (legalEntitiesData?.results ?? [])
+      .filter((le: { id?: number }) => le.id != null)
+      .map((le: { id: number; name: string }) => ({
+        value: String(le.id),
+        label: le.name,
+      }))
+
+    if (mode === 'edit' && detail?.assigned_legal_entities) {
+      const existingIds = new Set(fromData.map((o) => o.value))
+      for (const le of detail.assigned_legal_entities) {
+        if (le.id != null && !existingIds.has(String(le.id))) {
+          fromData.push({ value: String(le.id), label: le.name })
+        }
+      }
+    }
+
+    return fromData
+  }, [legalEntitiesData, mode, detail])
 
   React.useEffect(() => {
     if (mode === 'edit' && detail) {
