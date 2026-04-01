@@ -31,12 +31,23 @@ export const useColumnDstaxPreparer = ({
       ),
     },
     {
+      id: 'email',
+      label: 'Email',
+      render: (item) => (
+        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+          {item.email || '-'}
+        </span>
+      ),
+    },
+    {
       id: 'managed_client',
-      label: 'Managed Client ID',
+      label: 'Managed Client',
       render: (item) => (
         <span className="font-medium text-zinc-900 dark:text-zinc-100">
           {item.managed_client
-            ? (clientMap[item.managed_client] ?? item.managed_client)
+            ? typeof item.managed_client === 'object'
+              ? (item.managed_client as any).name
+              : (clientMap[item.managed_client as any] ?? item.managed_client)
             : '—'}
         </span>
       ),

@@ -86,7 +86,10 @@ apiClient.interceptors.response.use(
         isRefreshing = false
         Cookies.remove('token')
         Cookies.remove('refreshToken')
-        if (typeof window !== 'undefined') {
+        if (
+          typeof window !== 'undefined' &&
+          window.location.pathname !== '/login'
+        ) {
           window.location.href = '/login'
         }
         return Promise.reject(error)
@@ -113,7 +116,10 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null)
         Cookies.remove('token')
         Cookies.remove('refreshToken')
-        if (typeof window !== 'undefined') {
+        if (
+          typeof window !== 'undefined' &&
+          window.location.pathname !== '/login'
+        ) {
           window.location.href = '/login'
         }
         return Promise.reject(refreshError)

@@ -6,7 +6,7 @@ import type { SimpleClient } from './simpleClient'
 
 export interface SimpleLegalEntity {
   readonly id: number
+  /** @maxLength 255 */
+  name: string
   readonly client: SimpleClient
-  readonly name: string
-  readonly is_active: boolean
 }

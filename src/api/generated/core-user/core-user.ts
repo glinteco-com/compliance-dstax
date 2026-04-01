@@ -20,6 +20,7 @@ import type {
 
 import type {
   ApiCoreUserListParams,
+  Me,
   PaginatedUserList,
   PatchedUser,
   User,
@@ -665,4 +666,144 @@ export const useApiCoreUserDestroy = <
   const mutationOptions = getApiCoreUserDestroyMutationOptions(options)
 
   return useMutation(mutationOptions, queryClient)
+}
+export const apiCoreUserMeRetrieve = (signal?: AbortSignal) => {
+  return customInstance<Me>({
+    url: `/api/core/user/me/`,
+    method: 'GET',
+    signal,
+  })
+}
+
+export const getApiCoreUserMeRetrieveQueryKey = () => {
+  return [`/api/core/user/me/`] as const
+}
+
+export const getApiCoreUserMeRetrieveQueryOptions = <
+  TData = Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+      TError,
+      TData
+    >
+  >
+}) => {
+  const { query: queryOptions } = options ?? {}
+
+  const queryKey = queryOptions?.queryKey ?? getApiCoreUserMeRetrieveQueryKey()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>
+  > = ({ signal }) => apiCoreUserMeRetrieve(signal)
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ApiCoreUserMeRetrieveQueryResult = NonNullable<
+  Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>
+>
+export type ApiCoreUserMeRetrieveQueryError = ErrorType<unknown>
+
+export function useApiCoreUserMeRetrieve<
+  TData = Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useApiCoreUserMeRetrieve<
+  TData = Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>
+        >,
+        'initialData'
+      >
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useApiCoreUserMeRetrieve<
+  TData = Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+
+export function useApiCoreUserMeRetrieve<
+  TData = Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof apiCoreUserMeRetrieve>>,
+        TError,
+        TData
+      >
+    >
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = getApiCoreUserMeRetrieveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  query.queryKey = queryOptions.queryKey
+
+  return query
 }

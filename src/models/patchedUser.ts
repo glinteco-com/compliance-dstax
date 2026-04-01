@@ -3,13 +3,17 @@
  * Do not edit manually.
  */
 import type { RoleEnum } from './roleEnum'
-import type { LegalEntity } from './legalEntity'
+import type { SimpleClient } from './simpleClient'
+import type { SimpleLegalEntity } from './simpleLegalEntity'
 
 export interface PatchedUser {
   readonly id?: number
+  /** @maxLength 254 */
+  email?: string
   role?: RoleEnum
+  readonly managed_client?: SimpleClient
   /** @nullable */
-  managed_client?: number | null
-  readonly assigned_legal_entities?: readonly LegalEntity[]
+  managed_client_id?: number | null
+  readonly assigned_legal_entities?: readonly SimpleLegalEntity[]
   assigned_legal_entity_ids?: number[]
 }

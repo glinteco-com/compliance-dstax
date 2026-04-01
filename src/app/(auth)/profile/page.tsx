@@ -1,0 +1,117 @@
+'use client'
+
+import { useApiCoreUserMeRetrieve } from '@/api/generated/core-user/core-user'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Loader2, Mail, Building2, Shield, Landmark } from 'lucide-react'
+
+const roleLabels: Record<string, string> = {
+  DSTAX_ADMIN: 'DSTax Admin',
+  DSTAX_PREPARER: 'DSTax Preparer',
+  CLIENT_ADMIN: 'Client Admin',
+  CLIENT_STAFF: 'Client Staff',
+}
+
+export default function ProfilePage() {
+  const { data: me, isLoading, isError } = useApiCoreUserMeRetrieve()
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+      </div>
+    )
+  }
+
+  if (isError || !me) {
+    return (
+      <div className="text-muted-foreground flex h-64 items-center justify-center">
+        Failed to load profile.
+      </div>
+    )
+  }
+
+  const fullName =
+    [me.first_name, me.last_name].filter(Boolean).join(' ') || '—'
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6 p-6">
+      <h1 className="text-2xl font-semibold">My Profile</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Personal Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <InfoRow
+            icon={<Mail className="h-4 w-4" />}
+            label="Name"
+            value={fullName}
+          />
+          <InfoRow
+            icon={<Mail className="h-4 w-4" />}
+            label="Email"
+            value={me.email}
+          />
+          <InfoRow
+            icon={<Shield className="h-4 w-4" />}
+            label="Role"
+            value={roleLabels[me.role] ?? me.role}
+          />
+        </CardContent>
+      </Card>
+
+      {me.managed_client && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Managed Client</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InfoRow
+              icon={<Building2 className="h-4 w-4" />}
+              label="Client"
+              value={me.managed_client.name}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {me.assigned_legal_entities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Assigned Legal Entities</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {me.assigned_legal_entities.map((entity) => (
+              <InfoRow
+                key={entity.id}
+                icon={<Landmark className="h-4 w-4" />}
+                label={entity.name}
+                value={entity.client.name}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-muted-foreground">{icon}</span>
+      <div>
+        <p className="text-muted-foreground text-sm">{label}</p>
+        <p className="font-medium">{value}</p>
+      </div>
+    </div>
+  )
+}

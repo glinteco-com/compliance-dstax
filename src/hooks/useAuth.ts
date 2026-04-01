@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/api/api-client'
-import { Cookies } from '@/lib/cookies'
+import { Cookies, getAuthToken } from '@/lib/cookies'
+import { useSessionStore } from '@/store/useSessionStore'
 
 import { authClient } from '@/lib/auth/auth-client'
 import {
@@ -61,19 +63,30 @@ export const useAuth = () => {
   /**
    * Query for fetching current session
    */
+  const { setUser, clearSession } = useSessionStore()
+
   const sessionQuery = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
       try {
-        const { data } = await apiClient.get('/me')
+        const { data } = await apiClient.get('/api/core/user/me')
         return data
       } catch (error) {
         return null
       }
     },
+    enabled: !!getAuthToken(),
     retry: false,
     staleTime: 5 * 60 * 1000,
   })
+
+  useEffect(() => {
+    if (sessionQuery.data) {
+      setUser(sessionQuery.data)
+    } else if (!sessionQuery.isLoading) {
+      clearSession()
+    }
+  }, [sessionQuery.data, sessionQuery.isLoading, setUser, clearSession])
 
   /**
    * Mutation for exchanging/refreshing tokens
