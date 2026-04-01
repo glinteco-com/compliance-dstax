@@ -5,6 +5,6 @@
 
 export interface SimpleClient {
   readonly id: number
-  readonly name: string
-  readonly is_active: boolean
+  /** @maxLength 255 */
+  name: string
 }

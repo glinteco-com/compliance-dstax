@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Edit2, Trash2, Eye } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import { User } from '@/models/user'
+import { useSessionStore } from '@/store/useSessionStore'
 
 type UserWithId = User & { id: number }
 
@@ -28,6 +29,8 @@ export const useColumnClientUser = ({
   onDelete,
   clientMap = {},
 }: UseColumnClientUserProps) => {
+  const { user } = useSessionStore()
+  const isDstaxAdmin = user?.is_dstax_admin ?? false
   const columns: Column<UserWithId>[] = [
     {
       id: 'index',
@@ -47,15 +50,26 @@ export const useColumnClientUser = ({
       ),
     },
     {
-      id: 'managed_client',
-      label: 'Managed Client ID',
+      id: 'email',
+      label: 'Email',
       render: (item) => (
-        <span className="text-zinc-700 dark:text-zinc-300">
-          {item.managed_client
-            ? (clientMap[item.managed_client] ?? item.managed_client)
-            : '—'}
+        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+          {item.email || '-'}
         </span>
       ),
+    },
+    {
+      id: 'managed_client',
+      label: 'Managed Client',
+      render: (item) => {
+        const mc = item.managed_client
+        const label = mc
+          ? typeof mc === 'object'
+            ? (mc as unknown as { name: string }).name
+            : (clientMap[mc] ?? String(mc))
+          : '—'
+        return <span className="text-zinc-700 dark:text-zinc-300">{label}</span>
+      },
     },
     {
       id: 'assigned_legal_entities',
@@ -86,17 +100,19 @@ export const useColumnClientUser = ({
               <span className="sr-only">View Details</span>
             </Button>
           </CommonTooltip>
-          <CommonTooltip content="Edit">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-              onClick={() => onEdit(item)}
-            >
-              <Edit2 className="h-4 w-4" />
-              <span className="sr-only">Edit</span>
-            </Button>
-          </CommonTooltip>
+          {isDstaxAdmin && (
+            <CommonTooltip content="Edit">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                onClick={() => onEdit(item)}
+              >
+                <Edit2 className="h-4 w-4" />
+                <span className="sr-only">Edit</span>
+              </Button>
+            </CommonTooltip>
+          )}
           <CommonTooltip content="Delete">
             <Button
               variant="ghost"

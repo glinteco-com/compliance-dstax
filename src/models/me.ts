@@ -6,14 +6,19 @@ import type { RoleEnum } from './roleEnum'
 import type { SimpleClient } from './simpleClient'
 import type { SimpleLegalEntity } from './simpleLegalEntity'
 
-export interface User {
+export interface Me {
   readonly id: number
   /** @maxLength 254 */
   email: string
+  /** @maxLength 150 */
+  first_name?: string
+  /** @maxLength 150 */
+  last_name?: string
   role: RoleEnum
   readonly managed_client: SimpleClient
-  /** @nullable */
-  managed_client_id?: number | null
   readonly assigned_legal_entities: readonly SimpleLegalEntity[]
-  assigned_legal_entity_ids?: number[]
+  readonly is_dstax_admin: boolean
+  readonly is_dstax_preparer: boolean
+  readonly is_client_admin: boolean
+  readonly is_client_staff: boolean
 }

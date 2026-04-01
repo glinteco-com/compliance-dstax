@@ -122,7 +122,9 @@ export function PreparerDrawer({
   React.useEffect(() => {
     if (mode === 'edit' && detail) {
       const clientValue = detail.managed_client
-        ? String(detail.managed_client)
+        ? typeof detail.managed_client === 'object'
+          ? String((detail.managed_client as any).id)
+          : String(detail.managed_client)
         : ''
       prevClientRef.current = clientValue
       reset({
@@ -134,7 +136,8 @@ export function PreparerDrawer({
 
   React.useEffect(() => {
     if (mode === 'edit' && detail && legalEntitiesData) {
-      const ids = detail.assigned_legal_entity_ids?.map(String) ?? []
+      const ids =
+        detail.assigned_legal_entities?.map((le) => String(le.id)) ?? []
       setValue('assigned_legal_entity_ids', ids)
     }
   }, [mode, detail, legalEntitiesData, setValue])
@@ -189,8 +192,10 @@ export function PreparerDrawer({
                     </span>
                     <span className="text-zinc-600 dark:text-zinc-400">
                       {detail.managed_client
-                        ? (clientMap[detail.managed_client] ??
-                          detail.managed_client)
+                        ? typeof detail.managed_client === 'object'
+                          ? (detail.managed_client as any).name
+                          : (clientMap[detail.managed_client as any] ??
+                            String(detail.managed_client))
                         : '—'}
                     </span>
                   </div>
