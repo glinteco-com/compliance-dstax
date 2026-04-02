@@ -15,7 +15,7 @@ import {
   useApiTaxComplianceTvrRecordAddClientCommentsCreate,
 } from '@/api/generated/tax-compliance-tvr-record/tax-compliance-tvr-record'
 import type { TVRRecord } from '@/models'
-import { gridColumns, editableTvrColumns } from '../mock-data'
+import { tvrGridColumns, useTvrColumns } from '../hooks/useTvrColumns'
 import { useSessionStore } from '@/store/useSessionStore'
 
 const reverseFieldMap: Record<string, keyof TVRRecord> = {
@@ -96,20 +96,7 @@ export default function TVRDetailPage() {
 
   const userRole = useSessionStore((state) => state.user?.role)
 
-  const allowedEditableCols = useMemo(() => {
-    if (userRole === 'DSTAX_PREPARER') {
-      return editableTvrColumns.filter(
-        (col) => col !== 'dstaxComment' && col !== 'clientComment'
-      )
-    }
-    if (userRole === 'DSTAX_ADMIN') {
-      return ['dstaxComment']
-    }
-    if (userRole === 'CLIENT_ADMIN') {
-      return ['clientComment']
-    }
-    return []
-  }, [userRole])
+  const { visibleColumns, allowedEditableCols } = useTvrColumns(userRole)
 
   const records = data?.results ?? []
 
@@ -196,29 +183,6 @@ export default function TVRDetailPage() {
     }
   }, [rows])
 
-  const visibleColumns = useMemo(() => {
-    return gridColumns
-      .filter((col) => {
-        if (col.id === 'clientComment' || col.id === 'dstaxComment') {
-          return (
-            userRole === 'DSTAX_PREPARER' ||
-            userRole === 'DSTAX_ADMIN' ||
-            userRole === 'CLIENT_ADMIN'
-          )
-        }
-        return true
-      })
-      .map((col) => {
-        if (col.id === 'dstaxComment') {
-          return { ...col, readOnly: userRole !== 'DSTAX_ADMIN' }
-        }
-        if (col.id === 'clientComment') {
-          return { ...col, readOnly: userRole !== 'CLIENT_ADMIN' }
-        }
-        return col
-      })
-  }, [userRole])
-
   const handleCellChange = useCallback(
     (rowIndex: number, columnId: string, value: unknown) => {
       const row = rows[rowIndex]
@@ -254,7 +218,7 @@ export default function TVRDetailPage() {
 
           if (missingFields.length > 0) {
             const fieldLabels = missingFields
-              .map((f) => gridColumns.find((c) => c.id === f)?.label || f)
+              .map((f) => tvrGridColumns.find((c) => c.id === f)?.label || f)
               .join(', ')
             incompleteRows.push(
               `Row ${row.legalEntity} - ${row.jurisdiction}: missing ${fieldLabels}`

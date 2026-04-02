@@ -66,11 +66,11 @@ export default function TVRsPage() {
 
   const columns: Column<TVRPeriod>[] = [
     {
-      id: 'index',
-      label: '#',
-      width: 60,
+      id: 'record_id',
+      label: 'Record ID',
+      width: 100,
       align: 'center',
-      render: (_, index) => (currentPage - 1) * pageSize + index + 1,
+      render: (record) => record.id,
     },
     {
       id: 'clientName',
