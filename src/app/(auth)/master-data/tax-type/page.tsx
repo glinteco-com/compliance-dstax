@@ -32,6 +32,7 @@ import {
   getApiTaxComplianceTaxTypeListQueryKey,
 } from '@/api/generated/tax-compliance-tax-type/tax-compliance-tax-type'
 import { TaxType } from '@/models/taxType'
+import { getApiErrorMessage } from '@/lib/utils'
 
 const formSchema = z.object({
   name: z
@@ -97,8 +98,8 @@ export default function TaxTypePage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to create tax type.')
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, 'Failed to create tax type.'))
         },
       },
     })
@@ -111,8 +112,8 @@ export default function TaxTypePage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to update tax type.')
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, 'Failed to update tax type.'))
         },
       },
     })
@@ -125,8 +126,8 @@ export default function TaxTypePage() {
           invalidateList()
           onCloseDeleteDialog()
         },
-        onError: () => {
-          toast.error('Failed to delete tax type.')
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, 'Failed to delete tax type.'))
         },
       },
     })

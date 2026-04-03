@@ -32,6 +32,7 @@ import {
   getApiTaxComplianceFilingTypeListQueryKey,
 } from '@/api/generated/tax-compliance-filing-type/tax-compliance-filing-type'
 import { FilingType } from '@/models/filingType'
+import { getApiErrorMessage } from '@/lib/utils'
 
 const formSchema = z.object({
   name: z
@@ -99,8 +100,10 @@ export default function FilingTypePage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to create filing type.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to create filing type.')
+          )
         },
       },
     })
@@ -113,8 +116,10 @@ export default function FilingTypePage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to update filing type.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to update filing type.')
+          )
         },
       },
     })
@@ -127,8 +132,10 @@ export default function FilingTypePage() {
           invalidateList()
           onCloseDeleteDialog()
         },
-        onError: () => {
-          toast.error('Failed to delete filing type.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to delete filing type.')
+          )
         },
       },
     })

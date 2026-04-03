@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Search, Plus } from 'lucide-react'
+import { getApiErrorMessage } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
@@ -113,8 +114,8 @@ export default function UsersPage() {
         invalidateList()
         onCloseDeleteDialog()
       },
-      onError: () => {
-        toast.error('Failed to delete user.')
+      onError: (error) => {
+        toast.error(getApiErrorMessage(error, 'Failed to delete user.'))
       },
     },
   })

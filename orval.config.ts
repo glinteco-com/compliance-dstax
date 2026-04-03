@@ -3,7 +3,7 @@ import { defineConfig } from 'orval'
 export default defineConfig({
   compliance: {
     input: {
-      target: 'http://100.81.155.97:8000/api/schema/',
+      target: 'https://test.compliance.dstax.com/api/schema/',
     },
     output: {
       target: 'src/api/generated/',

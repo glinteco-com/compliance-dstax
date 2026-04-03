@@ -35,6 +35,7 @@ import {
 } from '@/api/generated/tax-compliance-jurisdiction/tax-compliance-jurisdiction'
 import { Jurisdiction } from '@/models/jurisdiction'
 import { useJurisdictionLevels } from '../jurisdictions-level/hooks/useJurisdictionLevels'
+import { getApiErrorMessage } from '@/lib/utils'
 
 const formSchema = z.object({
   name: z
@@ -115,8 +116,10 @@ export default function JurisdictionsPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to create jurisdiction.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to create jurisdiction.')
+          )
         },
       },
     })
@@ -129,8 +132,10 @@ export default function JurisdictionsPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to update jurisdiction.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to update jurisdiction.')
+          )
         },
       },
     })
@@ -143,8 +148,10 @@ export default function JurisdictionsPage() {
           invalidateList()
           onCloseDeleteDialog()
         },
-        onError: () => {
-          toast.error('Failed to delete jurisdiction.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to delete jurisdiction.')
+          )
         },
       },
     })

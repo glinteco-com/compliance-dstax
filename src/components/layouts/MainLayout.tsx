@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useSessionStore } from '@/store/useSessionStore'
 import {
   Building2,
   Users,
@@ -259,6 +260,29 @@ function NavMenuItem({
 
 function AppSidebar() {
   const pathname = usePathname()
+  const { user } = useSessionStore()
+
+  const filteredItems = React.useMemo(() => {
+    if (!user) return items
+
+    return items.map((item) => {
+      if (item.title === 'Clients' && item.items) {
+        return {
+          ...item,
+          items: item.items.filter((subItem) => {
+            if (
+              user.is_dstax_preparer &&
+              (subItem.title === 'Users' || subItem.title === 'DSTax Preparer')
+            ) {
+              return false
+            }
+            return true
+          }),
+        }
+      }
+      return item
+    })
+  }, [user])
 
   return (
     <Sidebar className="border-0! bg-black">
@@ -270,7 +294,7 @@ function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <NavMenuItem key={item.title} item={item} pathname={pathname} />
               ))}
             </SidebarMenu>

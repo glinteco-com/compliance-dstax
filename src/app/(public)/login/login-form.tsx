@@ -11,6 +11,7 @@ import * as z from 'zod'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { getApiErrorMessage } from '@/lib/utils'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -39,21 +40,8 @@ export function LoginForm() {
           router.push('/')
           router.refresh()
         },
-        onError: (err: any) => {
-          console.error('Login failed:', err)
-          const dataError = err.response?.data
-          const errorMessage =
-            dataError?.errors?.detail ||
-            dataError?.detail ||
-            (typeof dataError === 'string' ? dataError : null) ||
-            err.message ||
-            'An unexpected error occurred'
-
-          toast.error(
-            typeof errorMessage === 'string'
-              ? errorMessage
-              : 'Invalid credentials'
-          )
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, 'Invalid credentials'))
         },
       }
     )

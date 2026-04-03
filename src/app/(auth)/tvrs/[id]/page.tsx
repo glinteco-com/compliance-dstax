@@ -162,11 +162,11 @@ export default function TVRDetailPage() {
   const [changedRowIds, setChangedRowIds] = useState<Set<string>>(new Set())
   const [isPreparing, setIsPreparing] = useState(false)
 
-  const [filterLegalEntity, setFilterLegalEntity] = useState('')
-  const [filterJurisdiction, setFilterJurisdiction] = useState('')
-  const [filterTaxType, setFilterTaxType] = useState('')
-  const [filterFilingFrequency, setFilterFilingFrequency] = useState('')
-  const [filterFilingType, setFilterFilingType] = useState('')
+  const [filterLegalEntity, setFilterLegalEntity] = useState('all')
+  const [filterJurisdiction, setFilterJurisdiction] = useState('all')
+  const [filterTaxType, setFilterTaxType] = useState('all')
+  const [filterFilingFrequency, setFilterFilingFrequency] = useState('all')
+  const [filterFilingType, setFilterFilingType] = useState('all')
 
   const filterOptions = useMemo(() => {
     const unique = (arr: string[]) =>
@@ -175,11 +175,26 @@ export default function TVRDetailPage() {
         label: v,
       }))
     return {
-      legalEntities: unique(rows.map((r) => r.legalEntity)),
-      jurisdictions: unique(rows.map((r) => r.jurisdiction)),
-      taxTypes: unique(rows.map((r) => r.taxType)),
-      filingFrequencies: unique(rows.map((r) => r.filingFrequency)),
-      filingTypes: unique(rows.map((r) => r.filingMethod)),
+      legalEntities: [
+        { value: 'all', label: 'All Legal Entities' },
+        ...unique(rows.map((r) => r.legalEntity)),
+      ],
+      jurisdictions: [
+        { value: 'all', label: 'All Jurisdictions' },
+        ...unique(rows.map((r) => r.jurisdiction)),
+      ],
+      taxTypes: [
+        { value: 'all', label: 'All Tax Types' },
+        ...unique(rows.map((r) => r.taxType)),
+      ],
+      filingFrequencies: [
+        { value: 'all', label: 'All Filing Frequencies' },
+        ...unique(rows.map((r) => r.filingFrequency)),
+      ],
+      filingTypes: [
+        { value: 'all', label: 'All Filing Types' },
+        ...unique(rows.map((r) => r.filingMethod)),
+      ],
     }
   }, [rows])
 
@@ -195,6 +210,28 @@ export default function TVRDetailPage() {
     },
     [rows]
   )
+
+  const getApiErrorMessages = useCallback((error: any): string[] => {
+    console.error('API Error:', error)
+    const errorData = error?.response?.data
+    if (
+      errorData?.type === 'validation_error' &&
+      Array.isArray(errorData.errors)
+    ) {
+      return errorData.errors.map((err: any) => {
+        const colId = Object.keys(reverseFieldMap).find(
+          (key) => reverseFieldMap[key] === err.attr
+        )
+        const label =
+          tvrGridColumns.find((c) => c.id === (colId || err.attr))?.label ||
+          err.attr
+        return `${label}: ${err.detail}`
+      })
+    }
+    if (typeof errorData?.detail === 'string') return [errorData.detail]
+    if (typeof errorData?.message === 'string') return [errorData.message]
+    return [error?.message || 'An unexpected error occurred. Please try again.']
+  }, [])
 
   const handlePrepared = useCallback(async () => {
     if (changedRowIds.size === 0) {
@@ -277,7 +314,43 @@ export default function TVRDetailPage() {
           }
           return updateRecord({ id: Number(id), data: payload as any })
         })
-        await Promise.all(promises)
+        const results = await Promise.allSettled(promises)
+        const rejected = results.filter(
+          (r) => r.status === 'rejected'
+        ) as PromiseRejectedResult[]
+
+        if (rejected.length > 0) {
+          // Show each error as a toast
+          rejected.forEach((r) => {
+            const messages = getApiErrorMessages(r.reason)
+            messages.forEach((msg) => toast.error(msg))
+          })
+
+          // Track which ones succeeded to partially clear state if desired
+          // For now, we'll keep all as "changed" if any failed to be safe,
+          // or we could filter them. Let's filter to improve UX.
+          const failedIds = new Set<string>()
+          results.forEach((res, idx) => {
+            if (res.status === 'rejected') {
+              failedIds.add(changedIdsArray[idx])
+            }
+          })
+
+          setChangedRowIds(failedIds)
+          setLocalEdits((prev) => {
+            const next = { ...prev }
+            changedIdsArray.forEach((id, idx) => {
+              if (results[idx].status === 'fulfilled') {
+                delete next[id]
+              }
+            })
+            return next
+          })
+
+          setIsPreparing(false)
+          refetch()
+          return
+        }
         toast.success(`${changedRowIds.size} row(s) updated and prepared.`)
       } else if (userRole === 'DSTAX_ADMIN') {
         const payload = Array.from(changedRowIds).map((id) => {
@@ -309,8 +382,8 @@ export default function TVRDetailPage() {
       setLocalEdits({})
       refetch()
     } catch (error) {
-      console.error('Submit error:', error)
-      toast.error('Failed to submit changes. Please try again.')
+      const messages = getApiErrorMessages(error)
+      messages.forEach((msg) => toast.error(msg))
     } finally {
       setIsPreparing(false)
     }
@@ -326,13 +399,18 @@ export default function TVRDetailPage() {
   ])
 
   const filteredRows = rows.filter((row) => {
-    if (filterLegalEntity && row.legalEntity !== filterLegalEntity) return false
-    if (filterJurisdiction && row.jurisdiction !== filterJurisdiction)
+    if (filterLegalEntity !== 'all' && row.legalEntity !== filterLegalEntity)
       return false
-    if (filterTaxType && row.taxType !== filterTaxType) return false
-    if (filterFilingFrequency && row.filingFrequency !== filterFilingFrequency)
+    if (filterJurisdiction !== 'all' && row.jurisdiction !== filterJurisdiction)
       return false
-    if (filterFilingType && row.filingMethod !== filterFilingType) return false
+    if (filterTaxType !== 'all' && row.taxType !== filterTaxType) return false
+    if (
+      filterFilingFrequency !== 'all' &&
+      row.filingFrequency !== filterFilingFrequency
+    )
+      return false
+    if (filterFilingType !== 'all' && row.filingMethod !== filterFilingType)
+      return false
     return true
   })
 
@@ -395,31 +473,31 @@ export default function TVRDetailPage() {
           placeholder="All Legal Entities"
           options={filterOptions.legalEntities}
           value={filterLegalEntity}
-          onChange={(v) => setFilterLegalEntity(v)}
+          onChange={(v) => setFilterLegalEntity(String(v))}
         />
         <CommonSelect
           placeholder="All Jurisdictions"
           options={filterOptions.jurisdictions}
           value={filterJurisdiction}
-          onChange={(v) => setFilterJurisdiction(v)}
+          onChange={(v) => setFilterJurisdiction(String(v))}
         />
         <CommonSelect
           placeholder="All Tax Types"
           options={filterOptions.taxTypes}
           value={filterTaxType}
-          onChange={(v) => setFilterTaxType(v)}
+          onChange={(v) => setFilterTaxType(String(v))}
         />
         <CommonSelect
           placeholder="All Frequencies"
           options={filterOptions.filingFrequencies}
           value={filterFilingFrequency}
-          onChange={(v) => setFilterFilingFrequency(v)}
+          onChange={(v) => setFilterFilingFrequency(String(v))}
         />
         <CommonSelect
           placeholder="All Filing Types"
           options={filterOptions.filingTypes}
           value={filterFilingType}
-          onChange={(v) => setFilterFilingType(v)}
+          onChange={(v) => setFilterFilingType(String(v))}
         />
       </div>
 

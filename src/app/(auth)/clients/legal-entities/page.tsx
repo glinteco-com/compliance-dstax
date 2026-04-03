@@ -35,6 +35,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { Search, Plus, ArrowLeft } from 'lucide-react'
+import { getApiErrorMessage } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
 
 type ClientWithId = Client & { id: number }
@@ -129,8 +130,10 @@ export default function LegalEntitiesPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to create legal entity.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to create legal entity.')
+          )
         },
       },
     })
@@ -143,8 +146,10 @@ export default function LegalEntitiesPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to update legal entity.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to update legal entity.')
+          )
         },
       },
     })
@@ -157,8 +162,10 @@ export default function LegalEntitiesPage() {
           invalidateList()
           onCloseDeleteDialog()
         },
-        onError: () => {
-          toast.error('Failed to delete legal entity.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to delete legal entity.')
+          )
         },
       },
     })

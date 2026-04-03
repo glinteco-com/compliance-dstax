@@ -8,7 +8,7 @@ import { CommonTable, type Column } from '@/components/table/CommonTable'
 import { Eye, Search } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import { useDebounce } from '@/hooks/useDebounce'
-import { useApiTaxComplianceTvrPeriodActivesRetrieve } from '@/api/generated/tax-compliance-tvr-period/tax-compliance-tvr-period'
+import { useApiTaxComplianceTvrPeriodActivesList } from '@/api/generated/tax-compliance-tvr-period/tax-compliance-tvr-period'
 import type { TVRPeriod } from '@/models'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -42,10 +42,10 @@ export default function TVRsPage() {
     setCurrentPage(1)
   }, [search])
 
-  const { data, isLoading } = useApiTaxComplianceTvrPeriodActivesRetrieve()
+  const { data, isLoading } = useApiTaxComplianceTvrPeriodActivesList()
 
   const tvrPeriods = React.useMemo(() => {
-    const items = (data as unknown as TVRPeriod[]) ?? []
+    const items = (data?.results as unknown as TVRPeriod[]) ?? []
     if (!search) return items
     const q = search.toLowerCase()
     return items.filter((p) => p.client.name.toLowerCase().includes(q))

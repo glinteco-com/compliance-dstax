@@ -11,7 +11,7 @@ import {
 import { cn } from '@/lib/utils'
 
 export interface SelectOption {
-  value: string
+  value: string | number
   label: string
 }
 
@@ -20,8 +20,8 @@ export interface CommonSelectProps {
   error?: string
   placeholder?: string
   options: SelectOption[]
-  value?: string
-  onChange?: (value: string) => void
+  value?: string | number
+  onChange?: (value: string | number) => void
   onBlur?: () => void
   disabled?: boolean
   className?: string
@@ -47,6 +47,18 @@ const CommonSelect = React.forwardRef<HTMLButtonElement, CommonSelectProps>(
     const internalId = React.useId()
     const selectId = id || internalId
 
+    const handleValueChange = (val: string) => {
+      // Find if original value was a number
+      const originalOption = options.find((opt) => opt.value.toString() === val)
+      if (originalOption) {
+        onChange?.(originalOption.value)
+      } else {
+        onChange?.(val)
+      }
+    }
+
+    const stringValue = value != null ? value.toString() : ''
+
     return (
       <div className="flex w-full flex-col gap-1.5">
         {label && (
@@ -57,7 +69,11 @@ const CommonSelect = React.forwardRef<HTMLButtonElement, CommonSelectProps>(
             {label}
           </label>
         )}
-        <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <Select
+          value={stringValue}
+          onValueChange={handleValueChange}
+          disabled={disabled}
+        >
           <SelectTrigger
             ref={ref}
             id={selectId}
@@ -71,11 +87,14 @@ const CommonSelect = React.forwardRef<HTMLButtonElement, CommonSelectProps>(
           >
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-80" position="popper">
             {options
               .filter((option) => option.value != null && option.value !== '')
               .map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value.toString()}
+                  value={option.value.toString()}
+                >
                   {option.label}
                 </SelectItem>
               ))}

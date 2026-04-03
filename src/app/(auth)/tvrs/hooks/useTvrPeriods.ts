@@ -8,11 +8,12 @@ import {
   useApiTaxComplianceTvrPeriodDestroy,
   useApiTaxComplianceTvrPeriodPublishCreate,
   useApiTaxComplianceTvrPeriodFundingReceivedCreate,
-  useApiTaxComplianceTvrPeriodActivesRetrieve,
+  useApiTaxComplianceTvrPeriodActivesList,
 } from '@/api/generated/tax-compliance-tvr-period/tax-compliance-tvr-period'
 import { ApiTaxComplianceTvrPeriodListParams } from '@/models/apiTaxComplianceTvrPeriodListParams'
 import { ApiTaxComplianceTvrPeriodListWorkflowStatus } from '@/models/apiTaxComplianceTvrPeriodListWorkflowStatus'
 import { PaginatedTVRPeriodList } from '@/models/paginatedTVRPeriodList'
+import { TVRPeriod } from '@/models/tVRPeriod'
 
 interface TvrPeriodListParams {
   page: number
@@ -53,7 +54,11 @@ export const useTvrPeriodDetail = (id?: number) => {
 }
 
 export const useTvrPeriodActives = () => {
-  return useApiTaxComplianceTvrPeriodActivesRetrieve()
+  const { data, ...rest } = useApiTaxComplianceTvrPeriodActivesList()
+  return {
+    data: (data?.results as unknown as TVRPeriod[]) ?? [],
+    ...rest,
+  }
 }
 
 export const useTvrPeriodCreate = () => {

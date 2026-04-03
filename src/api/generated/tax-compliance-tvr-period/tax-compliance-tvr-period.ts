@@ -19,6 +19,7 @@ import type {
 } from '@tanstack/react-query'
 
 import type {
+  ApiTaxComplianceTvrPeriodActivesListParams,
   ApiTaxComplianceTvrPeriodListParams,
   PaginatedTVRPeriodList,
   PatchedTVRPeriod,
@@ -864,72 +865,82 @@ export const useApiTaxComplianceTvrPeriodPublishCreate = <
 
   return useMutation(mutationOptions, queryClient)
 }
-export const apiTaxComplianceTvrPeriodActivesRetrieve = (
+export const apiTaxComplianceTvrPeriodActivesList = (
+  params?: ApiTaxComplianceTvrPeriodActivesListParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<TVRPeriod>({
+  return customInstance<PaginatedTVRPeriodList>({
     url: `/api/tax_compliance/tvr_period/actives/`,
     method: 'GET',
+    params,
     signal,
   })
 }
 
-export const getApiTaxComplianceTvrPeriodActivesRetrieveQueryKey = () => {
-  return [`/api/tax_compliance/tvr_period/actives/`] as const
+export const getApiTaxComplianceTvrPeriodActivesListQueryKey = (
+  params?: ApiTaxComplianceTvrPeriodActivesListParams
+) => {
+  return [
+    `/api/tax_compliance/tvr_period/actives/`,
+    ...(params ? [params] : []),
+  ] as const
 }
 
-export const getApiTaxComplianceTvrPeriodActivesRetrieveQueryOptions = <
-  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+export const getApiTaxComplianceTvrPeriodActivesListQueryOptions = <
+  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
-      TError,
-      TData
+>(
+  params?: ApiTaxComplianceTvrPeriodActivesListParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
+        TError,
+        TData
+      >
     >
-  >
-}) => {
+  }
+) => {
   const { query: queryOptions } = options ?? {}
 
   const queryKey =
     queryOptions?.queryKey ??
-    getApiTaxComplianceTvrPeriodActivesRetrieveQueryKey()
+    getApiTaxComplianceTvrPeriodActivesListQueryKey(params)
 
   const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>
-  > = ({ signal }) => apiTaxComplianceTvrPeriodActivesRetrieve(signal)
+    Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>
+  > = ({ signal }) => apiTaxComplianceTvrPeriodActivesList(params, signal)
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+    Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
     TError,
     TData
   > & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type ApiTaxComplianceTvrPeriodActivesRetrieveQueryResult = NonNullable<
-  Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>
+export type ApiTaxComplianceTvrPeriodActivesListQueryResult = NonNullable<
+  Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>
 >
-export type ApiTaxComplianceTvrPeriodActivesRetrieveQueryError =
-  ErrorType<unknown>
+export type ApiTaxComplianceTvrPeriodActivesListQueryError = ErrorType<unknown>
 
-export function useApiTaxComplianceTvrPeriodActivesRetrieve<
-  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+export function useApiTaxComplianceTvrPeriodActivesList<
+  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
   TError = ErrorType<unknown>,
 >(
+  params: undefined | ApiTaxComplianceTvrPeriodActivesListParams,
   options: {
     query: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
         TError,
         TData
       >
     > &
       Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
           TError,
-          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>
+          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>
         >,
         'initialData'
       >
@@ -938,23 +949,24 @@ export function useApiTaxComplianceTvrPeriodActivesRetrieve<
 ): DefinedUseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useApiTaxComplianceTvrPeriodActivesRetrieve<
-  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+export function useApiTaxComplianceTvrPeriodActivesList<
+  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
   TError = ErrorType<unknown>,
 >(
+  params?: ApiTaxComplianceTvrPeriodActivesListParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
         TError,
         TData
       >
     > &
       Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
           TError,
-          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>
+          Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>
         >,
         'initialData'
       >
@@ -963,14 +975,15 @@ export function useApiTaxComplianceTvrPeriodActivesRetrieve<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 }
-export function useApiTaxComplianceTvrPeriodActivesRetrieve<
-  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+export function useApiTaxComplianceTvrPeriodActivesList<
+  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
   TError = ErrorType<unknown>,
 >(
+  params?: ApiTaxComplianceTvrPeriodActivesListParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
         TError,
         TData
       >
@@ -981,14 +994,15 @@ export function useApiTaxComplianceTvrPeriodActivesRetrieve<
   queryKey: DataTag<QueryKey, TData, TError>
 }
 
-export function useApiTaxComplianceTvrPeriodActivesRetrieve<
-  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+export function useApiTaxComplianceTvrPeriodActivesList<
+  TData = Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
   TError = ErrorType<unknown>,
 >(
+  params?: ApiTaxComplianceTvrPeriodActivesListParams,
   options?: {
     query?: Partial<
       UseQueryOptions<
-        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesRetrieve>>,
+        Awaited<ReturnType<typeof apiTaxComplianceTvrPeriodActivesList>>,
         TError,
         TData
       >
@@ -998,8 +1012,10 @@ export function useApiTaxComplianceTvrPeriodActivesRetrieve<
 ): UseQueryResult<TData, TError> & {
   queryKey: DataTag<QueryKey, TData, TError>
 } {
-  const queryOptions =
-    getApiTaxComplianceTvrPeriodActivesRetrieveQueryOptions(options)
+  const queryOptions = getApiTaxComplianceTvrPeriodActivesListQueryOptions(
+    params,
+    options
+  )
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<
     TData,
