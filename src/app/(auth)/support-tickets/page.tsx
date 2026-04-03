@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { InputDatePicker } from '@/components/date-picker/date-picker'
 import FormController from '@/components/form/FormController'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -27,27 +26,27 @@ import {
   useUpdateTicket,
   useDeleteTicket,
 } from './hooks/useSupportTickets'
+import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
+import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
 import { useColumnSupportTicket } from './hooks/useColumnSupportTicket'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Ticket } from '@/types/support-ticket'
+import { useSessionStore } from '@/store/useSessionStore'
 
 const ticketSchema = z.object({
-  name: z.string().min(1, 'Ticket name is required'),
-  summary: z.string().min(1, 'Summary is required'),
-  createdDate: z.string().min(1, 'Create date is required'),
-  priority: z.enum(['low', 'normal', 'high']),
+  title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  dueDate: z.string().optional().or(z.literal('')),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  client_id: z.coerce.number().nullable().optional(),
+  legal_entity_id: z.coerce.number().nullable().optional(),
 })
 
 type TicketFormValues = z.infer<typeof ticketSchema>
 
 export default function SupportTicketsPage() {
-  const [isDeleting, setIsDeleting] = React.useState<string | null>(null)
-  const [targetTicketId, setTargetTicketId] = React.useState<string | null>(
+  const [isDeleting, setIsDeleting] = React.useState<number | null>(null)
+  const [targetTicketId, setTargetTicketId] = React.useState<number | null>(
     null
   )
 
@@ -72,13 +71,10 @@ export default function SupportTicketsPage() {
   } = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
     defaultValues: {
-      name: '',
-      summary: '',
-      createdDate: new Date().toISOString().split('T')[0],
-      priority: 'low',
+      title: '',
       description: '',
-      dueDate: '',
-      email: '',
+      client_id: null,
+      legal_entity_id: null,
     },
   })
 
@@ -98,23 +94,17 @@ export default function SupportTicketsPage() {
 
     if (mode === 'edit' && item) {
       reset({
-        name: item.name,
-        summary: item.summary || '',
-        createdDate: item.createdDate,
-        priority: item.priority,
-        description: item.description || '',
-        dueDate: item.dueDate || '',
-        email: item.email || '',
+        title: item.title,
+        description: item.description,
+        client_id: item.client_id ?? item.client?.id ?? null,
+        legal_entity_id: item.legal_entity_id ?? item.legal_entity?.id ?? null,
       })
     } else if (mode === 'create') {
       reset({
-        name: '',
-        summary: '',
-        createdDate: new Date().toISOString().split('T')[0],
-        priority: 'low',
+        title: '',
         description: '',
-        dueDate: '',
-        email: '',
+        client_id: null,
+        legal_entity_id: null,
       })
     }
     setIsDrawerOpen(true)
@@ -122,14 +112,14 @@ export default function SupportTicketsPage() {
 
   const onSubmit = async (data: TicketFormValues) => {
     if (drawerMode === 'create') {
-      await createTicketMutation.mutateAsync(data)
+      await createTicketMutation.mutateAsync({ data })
     } else if (drawerMode === 'edit' && selectedItem) {
-      await updateTicketMutation.mutateAsync({ ...data, id: selectedItem.id })
+      await updateTicketMutation.mutateAsync({ id: selectedItem.id, data })
     }
     setIsDrawerOpen(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number) => {
     setTargetTicketId(id)
     onOpenDeleteDialog()
   }
@@ -137,7 +127,7 @@ export default function SupportTicketsPage() {
   const handleConfirmDelete = async () => {
     if (!targetTicketId) return
     setIsDeleting(targetTicketId)
-    await deleteTicketMutation.mutateAsync(targetTicketId)
+    await deleteTicketMutation.mutateAsync({ id: targetTicketId })
     setIsDeleting(null)
     onCloseDeleteDialog()
   }
@@ -145,22 +135,34 @@ export default function SupportTicketsPage() {
   const [searchInput, setSearchInput] = React.useState('')
   const search = useDebounce(searchInput, 400)
 
-  const [priority, setPriority] = React.useState<
-    'low' | 'normal' | 'high' | 'all'
-  >('all')
+  const [priority, setPriority] = React.useState<any>('all')
 
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
 
+  const { user } = useSessionStore()
+
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [search, priority])
+  }, [search, priority, user?.id])
+
+  const { data: clientData } = useApiCoreClientList()
+  const clientOptions = (clientData?.results ?? []).map((c) => ({
+    value: c.id,
+    label: c.name,
+  }))
+
+  const { data: legalEntityData } = useApiCoreLegalEntityList()
+  const legalEntityOptions = (legalEntityData?.results ?? []).map((le) => ({
+    value: le.id,
+    label: le.name,
+  }))
 
   const { data, isLoading } = useSupportTickets({
     page: currentPage,
     pageSize,
     search: search || undefined,
-    priority: priority !== 'all' ? priority : undefined,
+    created_by: user?.id,
   })
 
   const paginatedData = data?.results ?? []
@@ -174,7 +176,7 @@ export default function SupportTicketsPage() {
   const { columns } = useColumnSupportTicket({
     onView: (item) => openDrawer('view', item),
     onEdit: (item) => openDrawer('edit', item),
-    onDelete: handleDelete,
+    onDelete: (id) => handleDelete(id),
   })
 
   return (
@@ -224,6 +226,7 @@ export default function SupportTicketsPage() {
         data={paginatedData}
         emptyMessage="No tickets found"
         isLoading={isLoading}
+        onRowClick={(item) => openDrawer('view', item)}
         pagination={{
           currentPage,
           totalPages,
@@ -263,28 +266,8 @@ export default function SupportTicketsPage() {
                   <span className="text-zinc-600">{selectedItem.id}</span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">
-                    Created Date
-                  </span>
-                  <span className="text-zinc-600">
-                    {selectedItem.createdDate}
-                  </span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Name</span>
-                  <span className="text-zinc-600">{selectedItem.name}</span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Summary</span>
-                  <span className="text-zinc-600">{selectedItem.summary}</span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Priority</span>
-                  <span className="text-zinc-600">{selectedItem.priority}</span>
-                </div>
-                <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Email</span>
-                  <span className="text-zinc-600">{selectedItem.email}</span>
+                  <span className="font-semibold text-zinc-900">Title</span>
+                  <span className="text-zinc-600">{selectedItem.title}</span>
                 </div>
                 <div className="grid gap-1">
                   <span className="font-semibold text-zinc-900">
@@ -295,8 +278,26 @@ export default function SupportTicketsPage() {
                   </span>
                 </div>
                 <div className="grid gap-1">
-                  <span className="font-semibold text-zinc-900">Due Date</span>
-                  <span className="text-zinc-600">{selectedItem.dueDate}</span>
+                  <span className="font-semibold text-zinc-900">Client</span>
+                  <span className="text-zinc-600">
+                    {selectedItem.client?.name ?? '-'}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">
+                    Legal Entity
+                  </span>
+                  <span className="text-zinc-600">
+                    {selectedItem.legal_entity?.name ?? '-'}
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  <span className="font-semibold text-zinc-900">
+                    Created By
+                  </span>
+                  <span className="text-zinc-600">
+                    {selectedItem.created_by?.email ?? '-'}
+                  </span>
                 </div>
               </div>
             )}
@@ -308,53 +309,11 @@ export default function SupportTicketsPage() {
               >
                 <FormController
                   control={control}
-                  name="name"
+                  name="title"
                   Field={Input}
                   fieldProps={{
-                    label: 'Ticket Name',
-                    placeholder: 'Enter ticket name',
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="summary"
-                  Field={Input}
-                  fieldProps={{
-                    label: 'Summary of the Problem',
-                    placeholder: 'Brief summary',
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="createdDate"
-                  Field={InputDatePicker}
-                  fieldProps={{
-                    label: 'Create Date',
-                    disabled: true,
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="priority"
-                  Field={CommonSelect}
-                  fieldProps={{
-                    label: 'Priority',
-                    placeholder: 'Select priority',
-                    options: [
-                      { value: 'low', label: 'Low' },
-                      { value: 'normal', label: 'Normal' },
-                      { value: 'high', label: 'High' },
-                    ],
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="email"
-                  Field={Input}
-                  fieldProps={{
-                    label: 'User Email',
-                    type: 'email',
-                    placeholder: 'e.g. user@example.com',
+                    label: 'Support Issue Title',
+                    placeholder: 'Summarize your issue',
                   }}
                 />
                 <FormController
@@ -362,17 +321,29 @@ export default function SupportTicketsPage() {
                   name="description"
                   Field={Textarea}
                   fieldProps={{
-                    label: 'Description Issue',
-                    placeholder: 'Detailed description',
-                    rows: 5,
+                    label: 'Description',
+                    placeholder: 'Enter a detailed description',
+                    rows: 6,
                   }}
                 />
                 <FormController
                   control={control}
-                  name="dueDate"
-                  Field={InputDatePicker}
+                  name="client_id"
+                  Field={CommonSelect}
                   fieldProps={{
-                    label: 'Due On',
+                    label: 'Client',
+                    placeholder: 'Select client',
+                    options: clientOptions,
+                  }}
+                />
+                <FormController
+                  control={control}
+                  name="legal_entity_id"
+                  Field={CommonSelect}
+                  fieldProps={{
+                    label: 'Legal Entity',
+                    placeholder: 'Select legal entity',
+                    options: legalEntityOptions,
                   }}
                 />
               </form>

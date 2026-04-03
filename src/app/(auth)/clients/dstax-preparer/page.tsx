@@ -20,6 +20,7 @@ import {
 import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
 import { PaginatedClientList } from '@/models/paginatedClientList'
 import { Search, Plus } from 'lucide-react'
+import { getApiErrorMessage } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
 import { PreparerDrawer } from './components/PreparerDrawer'
 
@@ -106,8 +107,8 @@ export default function PreparersPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to create preparer.')
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, 'Failed to create preparer.'))
         },
       },
     })
@@ -120,8 +121,8 @@ export default function PreparersPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to update preparer.')
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, 'Failed to update preparer.'))
         },
       },
     })
@@ -134,8 +135,8 @@ export default function PreparersPage() {
           invalidateList()
           onCloseDeleteDialog()
         },
-        onError: () => {
-          toast.error('Failed to delete preparer.')
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, 'Failed to delete preparer.'))
         },
       },
     })

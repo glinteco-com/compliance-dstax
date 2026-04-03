@@ -25,6 +25,7 @@ import {
 } from '@/api/generated/core-user/core-user'
 import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
 import { User } from '@/models/user'
+import { getApiErrorMessage } from '@/lib/utils'
 
 const ROLE_LABELS: Record<string, string> = {
   DSTAX_ADMIN: 'DSTax Admin',
@@ -68,12 +69,14 @@ export function UserDrawer({
   const isClientStaff = sessionUser?.is_client_staff ?? false
 
   const canEditManagedClient = isDstaxAdmin
-  const canEditLegalEntities = isDstaxPreparer || isClientAdmin
+  const canEditLegalEntities = isDstaxAdmin || isDstaxPreparer || isClientAdmin
   const canEditRole = isDstaxAdmin
   const canUseEditFeature = !isClientStaff
 
   // Force mode to "view" if user doesn't have edit permission and is trying to edit
   const currentMode = mode === 'edit' && !canUseEditFeature ? 'view' : mode
+
+  const containerRef = React.useRef<HTMLDivElement>(null)
 
   const { data: userData, isLoading: isFetchingUser } = useApiCoreUserRetrieve(
     userId as number,
@@ -141,7 +144,10 @@ export function UserDrawer({
       if (currentMode === 'create') {
         reset({
           role: '',
-          managed_client: '',
+          managed_client:
+            !canEditManagedClient && sessionUser?.managed_client?.id
+              ? String(sessionUser.managed_client.id)
+              : '',
           assigned_legal_entity_ids: [],
         })
       } else if (userData) {
@@ -167,8 +173,8 @@ export function UserDrawer({
         onSuccess()
         onOpenChange(false)
       },
-      onError: () => {
-        toast.error('Failed to create user.')
+      onError: (error) => {
+        toast.error(getApiErrorMessage(error, 'Failed to create user.'))
       },
     },
   })
@@ -180,8 +186,8 @@ export function UserDrawer({
         onSuccess()
         onOpenChange(false)
       },
-      onError: () => {
-        toast.error('Failed to update user.')
+      onError: (error) => {
+        toast.error(getApiErrorMessage(error, 'Failed to update user.'))
       },
     },
   })
@@ -233,7 +239,7 @@ export function UserDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="flex-1 overflow-auto p-4">
+        <div ref={containerRef} className="flex-1 overflow-auto p-4">
           {currentMode === 'view' && isFetchingUser && (
             <div className="text-sm text-zinc-500">Loading user details...</div>
           )}
@@ -326,6 +332,7 @@ export function UserDrawer({
                     : 'Select legal entities',
                   options: legalEntityOptions,
                   disabled: !canEditLegalEntities || isDisablingForm,
+                  portalContainer: containerRef,
                 }}
               />
             </form>

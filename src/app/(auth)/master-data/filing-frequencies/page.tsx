@@ -32,6 +32,7 @@ import {
   getApiTaxComplianceFilingFrequencyListQueryKey,
 } from '@/api/generated/tax-compliance-filing-frequency/tax-compliance-filing-frequency'
 import { FilingFrequency } from '@/models/filingFrequency'
+import { getApiErrorMessage } from '@/lib/utils'
 
 const formSchema = z.object({
   code: z
@@ -98,8 +99,10 @@ export default function FilingFrequenciesPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to create filing frequency.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to create filing frequency.')
+          )
         },
       },
     })
@@ -112,8 +115,10 @@ export default function FilingFrequenciesPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to update filing frequency.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to update filing frequency.')
+          )
         },
       },
     })
@@ -126,8 +131,10 @@ export default function FilingFrequenciesPage() {
           invalidateList()
           onCloseDeleteDialog()
         },
-        onError: () => {
-          toast.error('Failed to delete filing frequency.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to delete filing frequency.')
+          )
         },
       },
     })

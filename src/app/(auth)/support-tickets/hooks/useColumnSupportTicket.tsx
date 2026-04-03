@@ -2,20 +2,12 @@ import { Column } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Eye, Pencil, Trash2 } from 'lucide-react'
 import CommonTooltip from '@/components/tooltip/CommonTooltip'
-import { cn } from '@/lib/utils'
 import { Ticket } from '@/types/support-ticket'
 
 interface UseColumnSupportTicketProps {
   onView: (item: Ticket) => void
   onEdit: (item: Ticket) => void
-  onDelete: (id: string) => void
-}
-
-const priorityColors = {
-  low: 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
-  normal:
-    'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-  high: 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800',
+  onDelete: (id: number) => void
 }
 
 export const useColumnSupportTicket = ({
@@ -27,37 +19,35 @@ export const useColumnSupportTicket = ({
     {
       id: 'id',
       label: 'ID',
-      className: 'font-mono text-xs w-[100px]',
+      className: 'font-mono text-xs w-[80px]',
       render: (ticket) => ticket.id,
     },
     {
-      id: 'createdDate',
-      label: 'Created Date',
-      render: (ticket) => ticket.createdDate,
-    },
-    {
-      id: 'name',
-      label: 'Name',
-      render: (ticket) => ticket.name,
-    },
-    {
-      id: 'priority',
-      label: 'Priority',
+      id: 'title',
+      label: 'Support Issue',
       render: (ticket) => (
-        <span
-          className={cn(
-            'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize',
-            priorityColors[ticket.priority]
-          )}
-        >
-          {ticket.priority}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-medium text-zinc-900">{ticket.title}</span>
+          <span className="line-clamp-1 text-xs text-zinc-500">
+            {ticket.description}
+          </span>
+        </div>
       ),
     },
     {
-      id: 'email',
-      label: 'Email',
-      render: (ticket) => ticket.email,
+      id: 'client',
+      label: 'Client',
+      render: (ticket) => ticket.client?.name ?? '-',
+    },
+    {
+      id: 'legal_entity',
+      label: 'Legal Entity',
+      render: (ticket) => ticket.legal_entity?.name ?? '-',
+    },
+    {
+      id: 'created_by',
+      label: 'Created By',
+      render: (ticket) => ticket.created_by?.email ?? '-',
     },
     {
       id: 'actions',
@@ -77,7 +67,7 @@ export const useColumnSupportTicket = ({
               <span className="sr-only">View Details</span>
             </Button>
           </CommonTooltip>
-          <CommonTooltip content="Edit">
+          {/* <CommonTooltip content="Edit">
             <Button
               variant="ghost"
               size="icon"
@@ -98,7 +88,7 @@ export const useColumnSupportTicket = ({
               <Trash2 className="h-4 w-4" />
               <span className="sr-only">Delete</span>
             </Button>
-          </CommonTooltip>
+          </CommonTooltip> */}
         </div>
       ),
     },

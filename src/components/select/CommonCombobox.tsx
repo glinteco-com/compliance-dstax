@@ -110,7 +110,11 @@ const CommonCombobox = React.forwardRef<HTMLInputElement, CommonComboboxProps>(
               )}
             </ComboboxValue>
           </ComboboxChips>
-          <ComboboxContent anchor={anchorRef} portalContainer={portalContainer}>
+          <ComboboxContent
+            anchor={anchorRef}
+            portalContainer={portalContainer}
+            className="max-h-80"
+          >
             <ComboboxEmpty>No items found.</ComboboxEmpty>
             <ComboboxList>
               {(item: string) => (

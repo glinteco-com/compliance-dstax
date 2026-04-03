@@ -32,6 +32,7 @@ import {
   getApiTaxCompliancePrepaymentMethodsListQueryKey,
 } from '@/api/generated/tax-compliance-prepayment-method/tax-compliance-prepayment-method'
 import { PrepaymentMethod } from '@/models/prepaymentMethod'
+import { getApiErrorMessage } from '@/lib/utils'
 
 const formSchema = z.object({
   jurisdiction_id: z.coerce
@@ -101,8 +102,10 @@ export default function PrepaymentMethodPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to create prepayment method.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to create prepayment method.')
+          )
         },
       },
     })
@@ -115,8 +118,10 @@ export default function PrepaymentMethodPage() {
           invalidateList()
           setIsDrawerOpen(false)
         },
-        onError: () => {
-          toast.error('Failed to update prepayment method.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to update prepayment method.')
+          )
         },
       },
     })
@@ -129,8 +134,10 @@ export default function PrepaymentMethodPage() {
           invalidateList()
           onCloseDeleteDialog()
         },
-        onError: () => {
-          toast.error('Failed to delete prepayment method.')
+        onError: (error) => {
+          toast.error(
+            getApiErrorMessage(error, 'Failed to delete prepayment method.')
+          )
         },
       },
     })
