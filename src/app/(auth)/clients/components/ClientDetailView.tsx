@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CommonTable } from '@/components/table/CommonTable'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -13,8 +12,7 @@ import { TVRPeriod } from '@/models/tVRPeriod'
 import { User } from '@/models/user'
 import { Column } from '@/components/table/CommonTable'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Search, ExternalLink } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { RoleEnum } from '@/models/roleEnum'
 
 type LegalEntityWithId = LegalEntity & { id: number }
@@ -190,24 +188,6 @@ export function ClientDetailView({
         </span>
       ),
     },
-    {
-      id: 'actions',
-      label: '',
-      width: 80,
-      align: 'right',
-      render: (item) => (
-        <Link href={`/tvrs/${item.id}`}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-          >
-            <ExternalLink className="h-4 w-4" />
-            <span className="sr-only">View TVR</span>
-          </Button>
-        </Link>
-      ),
-    },
   ]
 
   const usersColumns: Column<UserWithId>[] = [
@@ -315,6 +295,7 @@ export function ClientDetailView({
           data={tvrPeriods}
           emptyMessage="No TVR periods found"
           isLoading={isLoadingTvr}
+          onRowClick={(item) => router.push(`/tvrs/${item.id}`)}
           pagination={{
             currentPage: tvrPage,
             totalPages: tvrTotalPages,

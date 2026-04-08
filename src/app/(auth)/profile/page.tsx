@@ -2,7 +2,8 @@
 
 import { useApiCoreUserMeRetrieve } from '@/api/generated/core-user/core-user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, Mail, Building2, Shield, Landmark } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Mail, Building2, Shield, Landmark } from 'lucide-react'
 
 const roleLabels: Record<string, string> = {
   DSTAX_ADMIN: 'DSTax Admin',
@@ -16,8 +17,24 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+      <div className="mx-auto max-w-2xl space-y-6 p-6">
+        <Skeleton className="h-8 w-32" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-40" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-4 w-4" />
+                <div className="space-y-1">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     )
   }

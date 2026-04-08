@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { SpreadsheetGrid } from '@/components/spreadsheet/SpreadsheetGrid'
 import { CommonSelect } from '@/components/select/CommonSelect'
-import { ArrowLeft } from 'lucide-react'
-import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import { toast } from 'sonner'
 import {
   useApiTaxComplianceTvrRecordList,
@@ -17,6 +15,7 @@ import {
 import type { TVRRecord } from '@/models'
 import { tvrGridColumns, useTvrColumns } from '../hooks/useTvrColumns'
 import { useSessionStore } from '@/store/useSessionStore'
+import { BackButton } from '@/components/button/BackButton'
 
 const reverseFieldMap: Record<string, keyof TVRRecord> = {
   glAmount: 'gl_amount',
@@ -82,10 +81,15 @@ const dateFields = new Set(['filing_date', 'payment_date'])
 export default function TVRDetailPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const legalEntityId = searchParams.get('legalEntityId')
+    ? Number(searchParams.get('legalEntityId'))
+    : undefined
 
   const { data, isLoading, refetch } = useApiTaxComplianceTvrRecordList({
     period: Number(params.id),
     page_size: 1000,
+    legal_entity: legalEntityId,
   })
 
   const { mutateAsync: updateRecord } = useApiTaxComplianceTvrRecordUpdate()
@@ -163,6 +167,17 @@ export default function TVRDetailPage() {
   const [isPreparing, setIsPreparing] = useState(false)
 
   const [filterLegalEntity, setFilterLegalEntity] = useState('all')
+
+  useEffect(() => {
+    if (legalEntityId && records.length > 0) {
+      const match = records.find(
+        (r) => (r.legal_entity as any)?.id === legalEntityId
+      )
+      if (match?.legal_entity?.name) {
+        setFilterLegalEntity(match.legal_entity.name)
+      }
+    }
+  }, [legalEntityId, records])
   const [filterJurisdiction, setFilterJurisdiction] = useState('all')
   const [filterTaxType, setFilterTaxType] = useState('all')
   const [filterFilingFrequency, setFilterFilingFrequency] = useState('all')
@@ -433,15 +448,8 @@ export default function TVRDetailPage() {
     <div className="flex h-full w-full min-w-0 flex-col space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <CommonTooltip content="Back to client list">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={() => router.push('/tvrs')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </CommonTooltip>
+          <BackButton />
+
           <h1 className="text-2xl font-bold tracking-tight">
             TVR — {clientName ?? 'Loading...'}
           </h1>

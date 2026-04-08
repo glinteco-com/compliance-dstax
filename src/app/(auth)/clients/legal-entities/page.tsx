@@ -34,9 +34,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
-import { Search, Plus, ArrowLeft } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { getApiErrorMessage } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
+import { BackButton } from '@/components/button/BackButton'
 
 type ClientWithId = Client & { id: number }
 type LegalEntityWithId = LegalEntity & { id: number }
@@ -308,14 +309,8 @@ export default function LegalEntitiesPage() {
     <div className="min-w-0 flex-1 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleBackToClients}
-            className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+          <BackButton />
+
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {selectedClient.name}

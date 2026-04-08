@@ -28,7 +28,7 @@ import {
 } from '@/api/generated/core-user/core-user'
 import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
 import { PaginatedClientList } from '@/models/paginatedClientList'
-import { UserDrawer } from './components/UserDrawer'
+import { UserDrawer } from '../../users/components/UserDrawer'
 
 type UserWithId = User & { id: number }
 
