@@ -9,6 +9,8 @@ interface PaginationParams {
   pageSize: number
   search?: string
   role?: string
+  managedClientId?: number
+  assignedLegalEntityId?: number
 }
 
 export const useUsers = (params: PaginationParams) => {
@@ -17,6 +19,10 @@ export const useUsers = (params: PaginationParams) => {
     page_size: params.pageSize,
     ...(params.role && { role: params.role as ApiCoreUserListRole }),
     ...(params.search && { search: params.search }),
+    ...(params.managedClientId && { managed_client: params.managedClientId }),
+    ...(params.assignedLegalEntityId && {
+      assigned_legal_entities: String(params.assignedLegalEntityId),
+    }),
   }
   const { data, ...rest } = useApiCoreUserList(apiParams as any)
 

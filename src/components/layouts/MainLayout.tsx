@@ -13,22 +13,12 @@ import {
   Landmark,
   CreditCard,
   ClipboardList,
-  // Key,
-  // TrendingUp,
-  // GitMerge,
   Ticket,
-  // MessageSquare,
   ChevronRight,
   Database,
   Globe,
   Layers,
-  // Clock,
-  // Calendar,
-  // FolderOpen,
-  // ArrowDownLeft,
-  // ArrowUpRight,
-  // Archive,
-  // FileText,
+  User,
 } from 'lucide-react'
 
 import {
@@ -44,56 +34,66 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar'
 
+/**
+ * scope values:
+ *   'dstax'       — DSTAX_ADMIN or DSTAX_PREPARER
+ *   'dstax_admin' — DSTAX_ADMIN only
+ *   'client'      — CLIENT_ADMIN or CLIENT_STAFF
+ *   undefined     — visible to everyone
+ */
 interface NavigationItem {
   title: string
   url?: string
   icon?: React.ReactNode
-  scope?: string | string[] | null
+  scope?: 'dstax' | 'dstax_admin' | 'client'
   items?: NavigationItem[]
 }
 
 const items: NavigationItem[] = [
+  // Client roles — singular "Client" pointing to their own client dashboard
+  {
+    title: 'Client',
+    url: '/client',
+    icon: <User className="h-4 w-4" />,
+    scope: 'client',
+  },
+  // Dstax roles — plural "Clients" list
   {
     title: 'Clients',
+    url: '/clients',
     icon: <Users className="h-4 w-4" />,
-    items: [
-      {
-        title: 'Legal Entities',
-        url: '/clients/legal-entities',
-        icon: <Building2 className="h-4 w-4" />,
-      },
-      {
-        title: 'Users',
-        url: '/clients/users',
-        icon: <Users className="h-4 w-4" />,
-      },
-      {
-        title: 'DSTax Preparer',
-        url: '/clients/dstax-preparer',
-        icon: <Calculator className="h-4 w-4" />,
-      },
-    ],
+    scope: 'dstax',
+  },
+  // Legal Entities — root level, Dstax roles
+  {
+    title: 'Legal Entities',
+    url: '/legal-entities',
+    icon: <Building2 className="h-4 w-4" />,
+    scope: 'dstax',
+  },
+  // Users — root level, Dstax Admin only
+  {
+    title: 'Users',
+    url: '/users',
+    icon: <Users className="h-4 w-4" />,
+    scope: 'dstax_admin',
+  },
+  // DSTax Preparer management — Dstax roles
+  {
+    title: 'DSTax Preparer',
+    url: '/clients/dstax-preparer',
+    icon: <Calculator className="h-4 w-4" />,
+    scope: 'dstax',
   },
   {
     title: 'Master Data',
     icon: <Database className="h-4 w-4" />,
+    scope: 'dstax',
     items: [
       {
         title: 'Jurisdictions',
         icon: <Globe className="h-4 w-4" />,
         url: '/master-data/jurisdictions',
-        // items: [
-        //   {
-        //     title: 'Due Date',
-        //     url: '/master-data/jurisdictions/due-date',
-        //     icon: <Calendar className="h-4 w-4" />,
-        //   },
-        //   {
-        //     title: 'Due Date Time',
-        //     url: '/master-data/jurisdictions/due-date-time',
-        //     icon: <Clock className="h-4 w-4" />,
-        //   },
-        // ],
       },
       {
         title: 'Jurisdiction Level',
@@ -123,58 +123,26 @@ const items: NavigationItem[] = [
     ],
   },
   { title: 'TVRs', url: '/tvrs', icon: <ClipboardList className="h-4 w-4" /> },
-  // {
-  //   title: 'EFILE Credentials',
-  //   url: '/efile-credentials',
-  //   icon: <Key className="h-4 w-4" />,
-  // },
-  // {
-  //   title: 'Credit Carryfowards',
-  //   url: '/credit-carryfowards',
-  //   icon: <TrendingUp className="h-4 w-4" />,
-  // },
-  // {
-  //   title: 'Workflow',
-  //   url: '/workflow',
-  //   icon: <GitMerge className="h-4 w-4" />,
-  // },
-  // {
-  //   title: 'Client Folders',
-  //   icon: <FolderOpen className="h-4 w-4" />,
-  //   items: [
-  //     {
-  //       title: 'Inbound Data',
-  //       url: '/client-folders/inbound',
-  //       icon: <ArrowDownLeft className="h-4 w-4" />,
-  //     },
-  //     {
-  //       title: 'Outbound Data',
-  //       url: '/client-folders/outbound',
-  //       icon: <ArrowUpRight className="h-4 w-4" />,
-  //     },
-  //     {
-  //       title: 'Archived Returns',
-  //       url: '/client-folders/archived',
-  //       icon: <Archive className="h-4 w-4" />,
-  //     },
-  //     {
-  //       title: 'Client Documents',
-  //       url: '/client-folders/documents',
-  //       icon: <FileText className="h-4 w-4" />,
-  //     },
-  //   ],
-  // },
   {
     title: 'Support Tickets',
     url: '/support-tickets',
     icon: <Ticket className="h-4 w-4" />,
   },
-  // {
-  //   title: 'Communications',
-  //   url: '/communications',
-  //   icon: <MessageSquare className="h-4 w-4" />,
-  // },
 ]
+
+function isItemVisible(
+  item: NavigationItem,
+  isDstaxAdmin: boolean,
+  isDstaxPreparer: boolean,
+  isClientAdmin: boolean,
+  isClientStaff: boolean
+): boolean {
+  if (!item.scope) return true
+  if (item.scope === 'dstax') return isDstaxAdmin || isDstaxPreparer
+  if (item.scope === 'dstax_admin') return isDstaxAdmin
+  if (item.scope === 'client') return isClientAdmin || isClientStaff
+  return true
+}
 
 function NavMenuItem({
   item,
@@ -262,27 +230,22 @@ function AppSidebar() {
   const pathname = usePathname()
   const { user } = useSessionStore()
 
-  const filteredItems = React.useMemo(() => {
-    if (!user) return items
+  const isDstaxAdmin = user?.is_dstax_admin ?? false
+  const isDstaxPreparer = user?.is_dstax_preparer ?? false
+  const isClientAdmin = user?.is_client_admin ?? false
+  const isClientStaff = user?.is_client_staff ?? false
 
-    return items.map((item) => {
-      if (item.title === 'Clients' && item.items) {
-        return {
-          ...item,
-          items: item.items.filter((subItem) => {
-            if (
-              user.is_dstax_preparer &&
-              (subItem.title === 'Users' || subItem.title === 'DSTax Preparer')
-            ) {
-              return false
-            }
-            return true
-          }),
-        }
-      }
-      return item
-    })
-  }, [user])
+  const filteredItems = React.useMemo(() => {
+    return items.filter((item) =>
+      isItemVisible(
+        item,
+        isDstaxAdmin,
+        isDstaxPreparer,
+        isClientAdmin,
+        isClientStaff
+      )
+    )
+  }, [isDstaxAdmin, isDstaxPreparer, isClientAdmin, isClientStaff])
 
   return (
     <Sidebar className="border-0! bg-black">

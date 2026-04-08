@@ -63,7 +63,9 @@ export const useAuth = () => {
   /**
    * Query for fetching current session
    */
-  const { setUser, clearSession } = useSessionStore()
+  const { setUser, setSessionLoading, clearSession } = useSessionStore()
+
+  const hasToken = !!getAuthToken()
 
   const sessionQuery = useQuery({
     queryKey: ['session'],
@@ -75,18 +77,30 @@ export const useAuth = () => {
         return null
       }
     },
-    enabled: !!getAuthToken(),
+    enabled: hasToken,
     retry: false,
     staleTime: 5 * 60 * 1000,
   })
 
   useEffect(() => {
+    if (!hasToken) {
+      setSessionLoading(false)
+      return
+    }
     if (sessionQuery.data) {
       setUser(sessionQuery.data)
+      setSessionLoading(false)
     } else if (!sessionQuery.isLoading) {
       clearSession()
     }
-  }, [sessionQuery.data, sessionQuery.isLoading, setUser, clearSession])
+  }, [
+    sessionQuery.data,
+    sessionQuery.isLoading,
+    hasToken,
+    setUser,
+    setSessionLoading,
+    clearSession,
+  ])
 
   /**
    * Mutation for exchanging/refreshing tokens
