@@ -1,9 +1,10 @@
-import * as React from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import FormController from '@/components/form/FormController'
 import { CommonSelect } from '@/components/select/CommonSelect'
 import { CommonCombobox } from '@/components/select/CommonCombobox'
@@ -35,6 +36,8 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const formSchema = z.object({
+  email: z.string().email('Invalid email').optional(),
+  password: z.string().optional(),
   role: z.string().min(1, 'Role is required'),
   managed_client: z.string().optional(),
   assigned_legal_entity_ids: z.array(z.string()).optional(),
@@ -76,7 +79,7 @@ export function UserDrawer({
   // Force mode to "view" if user doesn't have edit permission and is trying to edit
   const currentMode = mode === 'edit' && !canUseEditFeature ? 'view' : mode
 
-  const containerRef = React.useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const { data: userData, isLoading: isFetchingUser } = useApiCoreUserRetrieve(
     userId as number,
@@ -95,6 +98,8 @@ export function UserDrawer({
   const { control, reset, handleSubmit } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      email: '',
+      password: '',
       role: '',
       managed_client: '',
       assigned_legal_entity_ids: [],
@@ -120,7 +125,7 @@ export function UserDrawer({
       }
     )
 
-  const legalEntityOptions = React.useMemo(() => {
+  const legalEntityOptions = useMemo(() => {
     const list = legalEntitiesData?.results ?? []
     const options = list.map((le: any) => ({
       value: String(le.id),
@@ -139,10 +144,12 @@ export function UserDrawer({
     return options
   }, [legalEntitiesData, currentMode, userData])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       if (currentMode === 'create') {
         reset({
+          email: '',
+          password: '',
           role: '',
           managed_client:
             !canEditManagedClient && sessionUser?.managed_client?.id
@@ -201,6 +208,8 @@ export function UserDrawer({
       .filter((id) => !isNaN(id))
 
     const payload = {
+      email: formData.email,
+      password: formData.password || undefined,
       role: formData.role as User['role'],
       managed_client: formData.managed_client
         ? Number(formData.managed_client)
@@ -299,6 +308,26 @@ export function UserDrawer({
               onSubmit={handleSubmit(onSubmit)}
               className="mt-2 space-y-4"
             >
+              <FormController
+                control={control}
+                name="email"
+                Field={Input}
+                fieldProps={{
+                  label: 'Email',
+                  placeholder: 'Enter email address',
+                  type: 'email',
+                }}
+              />
+              <FormController
+                control={control}
+                name="password"
+                Field={Input}
+                fieldProps={{
+                  label: 'Password',
+                  placeholder: 'Enter password',
+                  type: 'password',
+                }}
+              />
               <FormController
                 control={control}
                 name="role"

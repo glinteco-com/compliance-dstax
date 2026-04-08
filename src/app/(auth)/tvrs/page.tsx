@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CommonTable, type Column } from '@/components/table/CommonTable'
@@ -32,6 +32,14 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function TVRsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const clientIdParam = searchParams.get('clientId')
+  const legalEntityIdParam = searchParams.get('legalEntityId')
+  const filterClientId = clientIdParam ? Number(clientIdParam) : null
+  const filterLegalEntityId = legalEntityIdParam
+    ? Number(legalEntityIdParam)
+    : null
+
   const [searchInput, setSearchInput] = React.useState('')
   const search = useDebounce(searchInput, 400)
 
@@ -45,11 +53,14 @@ export default function TVRsPage() {
   const { data, isLoading } = useApiTaxComplianceTvrPeriodActivesList()
 
   const tvrPeriods = React.useMemo(() => {
-    const items = (data?.results as unknown as TVRPeriod[]) ?? []
+    let items = (data?.results as unknown as TVRPeriod[]) ?? []
+    if (filterClientId) {
+      items = items.filter((p) => p.client_id === filterClientId)
+    }
     if (!search) return items
     const q = search.toLowerCase()
     return items.filter((p) => p.client.name.toLowerCase().includes(q))
-  }, [data, search])
+  }, [data, search, filterClientId])
 
   const totalPages = Math.ceil(tvrPeriods.length / pageSize)
 
@@ -118,7 +129,10 @@ export default function TVRsPage() {
             size="icon-sm"
             onClick={(e) => {
               e.stopPropagation()
-              router.push(`/tvrs/${record.id}`)
+              const url = filterLegalEntityId
+                ? `/tvrs/${record.id}?legalEntityId=${filterLegalEntityId}`
+                : `/tvrs/${record.id}`
+              router.push(url)
             }}
           >
             <Eye className="h-4 w-4" />
@@ -151,7 +165,12 @@ export default function TVRsPage() {
         data={paginatedData}
         isLoading={isLoading}
         emptyMessage="No TVR periods found"
-        onRowClick={(record) => router.push(`/tvrs/${record.id}`)}
+        onRowClick={(record) => {
+          const url = filterLegalEntityId
+            ? `/tvrs/${record.id}?legalEntityId=${filterLegalEntityId}`
+            : `/tvrs/${record.id}`
+          router.push(url)
+        }}
         pagination={{
           currentPage,
           totalPages,

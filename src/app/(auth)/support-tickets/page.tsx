@@ -1,6 +1,6 @@
 'use client'
 
-import * as React from 'react'
+import { useState } from 'react'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Plus, Search } from 'lucide-react'
@@ -45,10 +45,8 @@ const ticketSchema = z.object({
 type TicketFormValues = z.infer<typeof ticketSchema>
 
 export default function SupportTicketsPage() {
-  const [isDeleting, setIsDeleting] = React.useState<number | null>(null)
-  const [targetTicketId, setTargetTicketId] = React.useState<number | null>(
-    null
-  )
+  const [isDeleting, setIsDeleting] = useState<number | null>(null)
+  const [targetTicketId, setTargetTicketId] = useState<number | null>(null)
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -57,11 +55,15 @@ export default function SupportTicketsPage() {
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
 
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
-  const [drawerMode, setDrawerMode] = React.useState<
-    'create' | 'edit' | 'view'
-  >('create')
-  const [selectedItem, setSelectedItem] = React.useState<Ticket | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [drawerMode, setDrawerMode] = useState<'create' | 'edit' | 'view'>(
+    'create'
+  )
+  const [selectedItem, setSelectedItem] = useState<Ticket | null>(null)
+
+  const { user } = useSessionStore()
+  const isDstaxRole = !!(user?.is_dstax_admin || user?.is_dstax_preparer)
+  const isClientRole = !!(user?.is_client_admin || user?.is_client_staff)
 
   const {
     control,
@@ -103,7 +105,7 @@ export default function SupportTicketsPage() {
       reset({
         title: '',
         description: '',
-        client_id: null,
+        client_id: isClientRole ? (user?.managed_client?.id ?? null) : null,
         legal_entity_id: null,
       })
     }
@@ -132,31 +134,27 @@ export default function SupportTicketsPage() {
     onCloseDeleteDialog()
   }
 
-  const [searchInput, setSearchInput] = React.useState('')
+  const [searchInput, setSearchInput] = useState('')
   const search = useDebounce(searchInput, 400)
-
-  const [priority, setPriority] = React.useState<any>('all')
-
-  const [currentPage, setCurrentPage] = React.useState(1)
-  const [pageSize, setPageSize] = React.useState(10)
-
-  const { user } = useSessionStore()
-
-  React.useEffect(() => {
-    setCurrentPage(1)
-  }, [search, priority, user?.id])
+  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'all'>(
+    'all'
+  )
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const { data: clientData } = useApiCoreClientList()
-  const clientOptions = (clientData?.results ?? []).map((c) => ({
-    value: c.id,
-    label: c.name,
+  const clientOptions = (clientData?.results ?? []).map((client) => ({
+    value: client.id,
+    label: client.name,
   }))
 
   const { data: legalEntityData } = useApiCoreLegalEntityList()
-  const legalEntityOptions = (legalEntityData?.results ?? []).map((le) => ({
-    value: le.id,
-    label: le.name,
-  }))
+  const legalEntityOptions = (legalEntityData?.results ?? []).map(
+    (legalEntity) => ({
+      value: legalEntity.id,
+      label: legalEntity.name,
+    })
+  )
 
   const { data, isLoading } = useSupportTickets({
     page: currentPage,
@@ -192,9 +190,10 @@ export default function SupportTicketsPage() {
           <CommonSelect
             placeholder="All Priorities"
             value={priority}
-            onChange={(val) =>
+            onChange={(val) => {
               setPriority(val as 'low' | 'normal' | 'high' | 'all')
-            }
+              setCurrentPage(1)
+            }}
             options={[
               { value: 'all', label: 'All Priorities' },
               { value: 'low', label: 'Low' },
@@ -203,15 +202,16 @@ export default function SupportTicketsPage() {
             ]}
             className="w-40"
           />
-          <div className="relative">
-            <Input
-              placeholder="Search..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-56"
-              prefixIcon={<Search />}
-            />
-          </div>
+          <Input
+            placeholder="Search..."
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="w-56"
+            prefixIcon={<Search />}
+          />
           <Button
             className="bg-orange-500 hover:bg-orange-600"
             onClick={() => openDrawer('create')}
@@ -258,6 +258,7 @@ export default function SupportTicketsPage() {
                 'Here are the details of the selected ticket.'}
             </DrawerDescription>
           </DrawerHeader>
+
           <div className="flex-1 overflow-auto p-4">
             {drawerMode === 'view' && selectedItem && (
               <div className="space-y-4 text-sm">
@@ -301,6 +302,7 @@ export default function SupportTicketsPage() {
                 </div>
               </div>
             )}
+
             {(drawerMode === 'create' || drawerMode === 'edit') && (
               <form
                 id="ticket-form"
@@ -326,29 +328,42 @@ export default function SupportTicketsPage() {
                     rows: 6,
                   }}
                 />
-                <FormController
-                  control={control}
-                  name="client_id"
-                  Field={CommonSelect}
-                  fieldProps={{
-                    label: 'Client',
-                    placeholder: 'Select client',
-                    options: clientOptions,
-                  }}
-                />
-                <FormController
-                  control={control}
-                  name="legal_entity_id"
-                  Field={CommonSelect}
-                  fieldProps={{
-                    label: 'Legal Entity',
-                    placeholder: 'Select legal entity',
-                    options: legalEntityOptions,
-                  }}
-                />
+                {isClientRole && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm leading-none font-medium">
+                      Client
+                    </label>
+                    <Input value={user?.managed_client?.name ?? ''} disabled />
+                  </div>
+                )}
+                {!isDstaxRole && !isClientRole && (
+                  <FormController
+                    control={control}
+                    name="client_id"
+                    Field={CommonSelect}
+                    fieldProps={{
+                      label: 'Client',
+                      placeholder: 'Select client',
+                      options: clientOptions,
+                    }}
+                  />
+                )}
+                {!isDstaxRole && (
+                  <FormController
+                    control={control}
+                    name="legal_entity_id"
+                    Field={CommonSelect}
+                    fieldProps={{
+                      label: 'Legal Entity',
+                      placeholder: 'Select legal entity',
+                      options: legalEntityOptions,
+                    }}
+                  />
+                )}
               </form>
             )}
           </div>
+
           <DrawerFooter>
             {(drawerMode === 'create' || drawerMode === 'edit') && (
               <Button type="submit" form="ticket-form" isLoading={isSubmitting}>

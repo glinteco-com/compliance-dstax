@@ -78,13 +78,6 @@ const items: NavigationItem[] = [
     icon: <Users className="h-4 w-4" />,
     scope: 'dstax_admin',
   },
-  // DSTax Preparer management — Dstax roles
-  {
-    title: 'DSTax Preparer',
-    url: '/clients/dstax-preparer',
-    icon: <Calculator className="h-4 w-4" />,
-    scope: 'dstax',
-  },
   {
     title: 'Master Data',
     icon: <Database className="h-4 w-4" />,
