@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
 }
 
-export default function TVRsPage() {
+function TVRsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const clientIdParam = searchParams.get('clientId')
@@ -181,5 +182,13 @@ export default function TVRsPage() {
         }}
       />
     </div>
+  )
+}
+
+export default function TVRsPage() {
+  return (
+    <Suspense>
+      <TVRsContent />
+    </Suspense>
   )
 }
