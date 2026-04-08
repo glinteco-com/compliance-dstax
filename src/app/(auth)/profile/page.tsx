@@ -4,6 +4,7 @@ import { useApiCoreUserMeRetrieve } from '@/api/generated/core-user/core-user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Mail, Building2, Shield, Landmark } from 'lucide-react'
+import Link from 'next/link'
 
 const roleLabels: Record<string, string> = {
   DSTAX_ADMIN: 'DSTax Admin',
@@ -86,7 +87,18 @@ export default function ProfilePage() {
             <InfoRow
               icon={<Building2 className="h-4 w-4" />}
               label="Client"
-              value={me.managed_client.name}
+              value={
+                me.managed_client.id ? (
+                  <Link
+                    href={`/clients/${me.managed_client.id}`}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {me.managed_client.name}
+                  </Link>
+                ) : (
+                  me.managed_client.name
+                )
+              }
             />
           </CardContent>
         </Card>
@@ -102,8 +114,30 @@ export default function ProfilePage() {
               <InfoRow
                 key={entity.id}
                 icon={<Landmark className="h-4 w-4" />}
-                label={entity.name}
-                value={entity.client.name}
+                label={
+                  entity.id ? (
+                    <Link
+                      href={`/legal-entities/${entity.id}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {entity.name}
+                    </Link>
+                  ) : (
+                    entity.name
+                  )
+                }
+                value={
+                  entity.client?.id ? (
+                    <Link
+                      href={`/clients/${entity.client.id}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {entity.client.name}
+                    </Link>
+                  ) : (
+                    (entity.client?.name ?? '—')
+                  )
+                }
               />
             ))}
           </CardContent>
@@ -119,15 +153,17 @@ function InfoRow({
   value,
 }: {
   icon: React.ReactNode
-  label: string
-  value: string
+  label: React.ReactNode
+  value: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-3">
       <span className="text-muted-foreground">{icon}</span>
       <div>
-        <p className="text-muted-foreground text-sm">{label}</p>
-        <p className="font-medium">{value}</p>
+        <div className="text-muted-foreground text-sm">
+          Legal Entity: {label}
+        </div>
+        <div className="font-medium">Client: {value}</div>
       </div>
     </div>
   )
