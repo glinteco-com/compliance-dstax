@@ -8,13 +8,18 @@ import { CommonSelect } from '@/components/select/CommonSelect'
 import { toast } from 'sonner'
 import {
   useApiTaxComplianceTvrRecordList,
-  useApiTaxComplianceTvrRecordUpdate,
+  useApiTaxComplianceTvrRecordMarkPreparedCreate,
   useApiTaxComplianceTvrRecordAddDstaxCommentsCreate,
   useApiTaxComplianceTvrRecordAddClientCommentsCreate,
 } from '@/api/generated/tax-compliance-tvr-record/tax-compliance-tvr-record'
+import {
+  useApiTaxComplianceTvrPeriodPublishCreate,
+  useApiTaxComplianceTvrPeriodFundingReceivedCreate,
+} from '@/api/generated/tax-compliance-tvr-period/tax-compliance-tvr-period'
 import type { TVRRecord } from '@/models'
 import { tvrGridColumns, useTvrColumns } from '../hooks/useTvrColumns'
 import { useSessionStore } from '@/store/useSessionStore'
+import { useTvrPeriodStore } from '@/store/useTvrPeriodStore'
 import { BackButton } from '@/components/button/BackButton'
 
 const reverseFieldMap: Record<string, keyof TVRRecord> = {
@@ -40,25 +45,9 @@ const reverseFieldMap: Record<string, keyof TVRRecord> = {
   isActive: 'is_ready',
 }
 
-const requiredFieldsForPreparer = [
-  'glAmount',
-  'salesTaxExtractAmount',
-  'manualAdjustment',
-  'useTax',
-  'creditsCarriedForwardPrior',
-  'creditsCarriedForwardFuture',
-  'localAdjustment',
-  'prepaymentDue',
-  'vendorsDiscount',
-  'businessAndOccupationTax',
-  'rounding',
-  'currencyConverted',
-  'statusConfirmationNumber',
-  'paymentConfirmationNumber',
-  'paymentAmount',
-  'filingDate',
-  'paymentDate',
-]
+const fieldToColumnMap: Record<string, string> = Object.fromEntries(
+  Object.entries(reverseFieldMap).map(([colId, apiField]) => [apiField, colId])
+)
 
 const numFields = new Set([
   'gl_amount',
@@ -92,13 +81,20 @@ export default function TVRDetailPage() {
     legal_entity: legalEntityId,
   })
 
-  const { mutateAsync: updateRecord } = useApiTaxComplianceTvrRecordUpdate()
+  const { mutateAsync: markPrepared } =
+    useApiTaxComplianceTvrRecordMarkPreparedCreate()
   const { mutateAsync: addDstaxComments } =
     useApiTaxComplianceTvrRecordAddDstaxCommentsCreate()
   const { mutateAsync: addClientComments } =
     useApiTaxComplianceTvrRecordAddClientCommentsCreate()
+  const { mutateAsync: publishPeriod } =
+    useApiTaxComplianceTvrPeriodPublishCreate()
+  const { mutateAsync: fundingReceived } =
+    useApiTaxComplianceTvrPeriodFundingReceivedCreate()
 
   const userRole = useSessionStore((state) => state.user?.role)
+  const selectedPeriod = useTvrPeriodStore((state) => state.selectedPeriod)
+  const isPublished = selectedPeriod?.workflow_status === 'PUBLISHED'
 
   const { visibleColumns, allowedEditableCols } = useTvrColumns(userRole)
 
@@ -165,6 +161,12 @@ export default function TVRDetailPage() {
 
   const [changedRowIds, setChangedRowIds] = useState<Set<string>>(new Set())
   const [isPreparing, setIsPreparing] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [isCommenting, setIsCommenting] = useState(false)
+  const [isFundingReceiving, setIsFundingReceiving] = useState(false)
+  const [errorCells, setErrorCells] = useState<Map<string, Set<string>>>(
+    new Map()
+  )
 
   const [filterLegalEntity, setFilterLegalEntity] = useState('all')
 
@@ -213,6 +215,11 @@ export default function TVRDetailPage() {
     }
   }, [rows])
 
+  const allRecordsReady = useMemo(
+    () => rows.length > 0 && rows.every((r) => r.isActive === true),
+    [rows]
+  )
+
   const handleCellChange = useCallback(
     (rowIndex: number, columnId: string, value: unknown) => {
       const row = rows[rowIndex]
@@ -222,25 +229,44 @@ export default function TVRDetailPage() {
         [row.id]: { ...prev[row.id], [columnId]: value },
       }))
       setChangedRowIds((ids) => new Set(ids).add(row.id))
+      setErrorCells((prev) => {
+        const rowErrors = prev.get(row.id)
+        if (!rowErrors) return prev
+        const next = new Map(prev)
+        const updated = new Set(rowErrors)
+        updated.delete(columnId)
+        if (updated.size === 0) {
+          next.delete(row.id)
+        } else {
+          next.set(row.id, updated)
+        }
+        return next
+      })
     },
     [rows]
   )
 
   const getApiErrorMessages = useCallback((error: any): string[] => {
-    console.error('API Error:', error)
     const errorData = error?.response?.data
     if (
       errorData?.type === 'validation_error' &&
       Array.isArray(errorData.errors)
     ) {
       return errorData.errors.map((err: any) => {
-        const colId = Object.keys(reverseFieldMap).find(
-          (key) => reverseFieldMap[key] === err.attr
-        )
+        const colId = fieldToColumnMap[err.attr] ?? err.attr
         const label =
-          tvrGridColumns.find((c) => c.id === (colId || err.attr))?.label ||
-          err.attr
-        return `${label}: ${err.detail}`
+          tvrGridColumns.find((c) => c.id === colId)?.label || err.attr
+        if (
+          err.code === 'required' ||
+          err.code === 'blank' ||
+          err.code === 'null'
+        ) {
+          return `${label}: Missing input`
+        }
+        if (err.code === 'invalid' || err.code === 'invalid_type') {
+          return `${label}: Invalid type`
+        }
+        return `${label}: Invalid input`
       })
     }
     if (typeof errorData?.detail === 'string') return [errorData.detail]
@@ -248,126 +274,86 @@ export default function TVRDetailPage() {
     return [error?.message || 'An unexpected error occurred. Please try again.']
   }, [])
 
-  const handlePrepared = useCallback(async () => {
+  const buildPreparePayload = useCallback(
+    (id: string) => {
+      const original = records.find((r) => String(r.id) === id)
+      if (!original) return null
+      const edits = localEdits[id] || {}
+      const item: any = { ...original }
+      for (const [key, value] of Object.entries(edits)) {
+        const apiField = reverseFieldMap[key]
+        if (apiField) {
+          if (numFields.has(apiField)) {
+            if (value === '' || value === null || value === undefined) {
+              item[apiField] = null
+            } else {
+              const num = Number(value)
+              item[apiField] = isNaN(num) ? value : num.toFixed(2)
+            }
+          } else if (dateFields.has(apiField)) {
+            item[apiField] = value === '' || value === null ? null : value
+          } else {
+            item[apiField] = value === '' || value === null ? null : value
+          }
+        }
+      }
+      return item
+    },
+    [records, localEdits]
+  )
+
+  const handlePrepare = useCallback(async () => {
     if (changedRowIds.size === 0) {
       toast.info('No changes to submit.')
       return
     }
     setIsPreparing(true)
     try {
-      if (userRole === 'DSTAX_PREPARER') {
-        const incompleteRows: string[] = []
-        const changedIdsArray = Array.from(changedRowIds)
+      const payload = Array.from(changedRowIds)
+        .map(buildPreparePayload)
+        .filter(Boolean)
+      await markPrepared({ data: payload })
+      toast.success(`${changedRowIds.size} row(s) prepared.`)
+      setChangedRowIds(new Set())
+      setLocalEdits({})
+      setErrorCells(new Map())
+      refetch()
+    } catch (error) {
+      const messages = getApiErrorMessages(error)
+      messages.forEach((msg) => toast.error(msg))
+    } finally {
+      setIsPreparing(false)
+    }
+  }, [
+    changedRowIds,
+    buildPreparePayload,
+    markPrepared,
+    getApiErrorMessages,
+    refetch,
+  ])
 
-        for (const id of changedIdsArray) {
-          const row = rows.find((r) => r.id === id)
-          if (!row) continue
+  const handlePublish = useCallback(async () => {
+    setIsPublishing(true)
+    try {
+      await publishPeriod({ id: Number(params.id), data: {} as any })
+      toast.success('TVR period published.')
+      refetch()
+    } catch (error) {
+      const messages = getApiErrorMessages(error)
+      messages.forEach((msg) => toast.error(msg))
+    } finally {
+      setIsPublishing(false)
+    }
+  }, [params.id, publishPeriod, getApiErrorMessages, refetch])
 
-          const missingFields = requiredFieldsForPreparer.filter((field) => {
-            const val = (row as any)[field]
-            return val === '' || val === null || val === undefined
-          })
-
-          if (missingFields.length > 0) {
-            const fieldLabels = missingFields
-              .map((f) => tvrGridColumns.find((c) => c.id === f)?.label || f)
-              .join(', ')
-            incompleteRows.push(
-              `Row ${row.legalEntity} - ${row.jurisdiction}: missing ${fieldLabels}`
-            )
-          }
-        }
-
-        if (incompleteRows.length > 0) {
-          toast.error(
-            `Please fill in all required fields for edited rows:\n${incompleteRows.join('\n')}`
-          )
-          setIsPreparing(false)
-          return
-        }
-
-        const promises = changedIdsArray.map((id) => {
-          const original = records.find((r) => String(r.id) === id)
-          if (!original) return Promise.resolve()
-
-          const edits = localEdits[id] || {}
-          // Explicitly map IDs from original record to avoid missing required fields
-          const payload = {
-            ...original,
-            period_id: (original.period as any)?.id ?? original.period_id,
-            legal_entity_id:
-              (original.legal_entity as any)?.id ?? original.legal_entity_id,
-            jurisdiction_id:
-              (original.jurisdiction as any)?.id ?? original.jurisdiction_id,
-            filing_frequency_id:
-              (original.filing_frequency as any)?.id ??
-              original.filing_frequency_id,
-            filing_method_id:
-              (original.filing_method as any)?.id ?? original.filing_method_id,
-          }
-
-          for (const [key, value] of Object.entries(edits)) {
-            const apiField = reverseFieldMap[key]
-            if (apiField) {
-              if (numFields.has(apiField)) {
-                if (value === '' || value === null || value === undefined) {
-                  ;(payload as any)[apiField] = null
-                } else {
-                  const num = Number(value)
-                  ;(payload as any)[apiField] = isNaN(num)
-                    ? null
-                    : num.toFixed(2)
-                }
-              } else if (dateFields.has(apiField)) {
-                ;(payload as any)[apiField] =
-                  value === '' || value === null ? null : value
-              } else {
-                ;(payload as any)[apiField] =
-                  value === '' || value === null ? null : value
-              }
-            }
-          }
-          return updateRecord({ id: Number(id), data: payload as any })
-        })
-        const results = await Promise.allSettled(promises)
-        const rejected = results.filter(
-          (r) => r.status === 'rejected'
-        ) as PromiseRejectedResult[]
-
-        if (rejected.length > 0) {
-          // Show each error as a toast
-          rejected.forEach((r) => {
-            const messages = getApiErrorMessages(r.reason)
-            messages.forEach((msg) => toast.error(msg))
-          })
-
-          // Track which ones succeeded to partially clear state if desired
-          // For now, we'll keep all as "changed" if any failed to be safe,
-          // or we could filter them. Let's filter to improve UX.
-          const failedIds = new Set<string>()
-          results.forEach((res, idx) => {
-            if (res.status === 'rejected') {
-              failedIds.add(changedIdsArray[idx])
-            }
-          })
-
-          setChangedRowIds(failedIds)
-          setLocalEdits((prev) => {
-            const next = { ...prev }
-            changedIdsArray.forEach((id, idx) => {
-              if (results[idx].status === 'fulfilled') {
-                delete next[id]
-              }
-            })
-            return next
-          })
-
-          setIsPreparing(false)
-          refetch()
-          return
-        }
-        toast.success(`${changedRowIds.size} row(s) updated and prepared.`)
-      } else if (userRole === 'DSTAX_ADMIN') {
+  const handleComment = useCallback(async () => {
+    if (changedRowIds.size === 0) {
+      toast.info('No changes to submit.')
+      return
+    }
+    setIsCommenting(true)
+    try {
+      if (userRole === 'DSTAX_ADMIN') {
         const payload = Array.from(changedRowIds).map((id) => {
           const edits = localEdits[id] || {}
           const original = records.find((r) => String(r.id) === id)
@@ -378,7 +364,6 @@ export default function TVRDetailPage() {
           }
         })
         await addDstaxComments({ data: payload })
-        toast.success(`Comments added for ${changedRowIds.size} row(s).`)
       } else if (userRole === 'CLIENT_ADMIN') {
         const payload = Array.from(changedRowIds).map((id) => {
           const edits = localEdits[id] || {}
@@ -390,28 +375,42 @@ export default function TVRDetailPage() {
           }
         })
         await addClientComments({ data: payload })
-        toast.success(`Comments added for ${changedRowIds.size} row(s).`)
       }
-
+      toast.success(`Comments added for ${changedRowIds.size} row(s).`)
       setChangedRowIds(new Set())
       setLocalEdits({})
+      setErrorCells(new Map())
       refetch()
     } catch (error) {
       const messages = getApiErrorMessages(error)
       messages.forEach((msg) => toast.error(msg))
     } finally {
-      setIsPreparing(false)
+      setIsCommenting(false)
     }
   }, [
     changedRowIds,
-    rows,
-    records,
     localEdits,
-    updateRecord,
+    records,
     addDstaxComments,
-    refetch,
+    addClientComments,
     userRole,
+    getApiErrorMessages,
+    refetch,
   ])
+
+  const handleFundingReceived = useCallback(async () => {
+    setIsFundingReceiving(true)
+    try {
+      await fundingReceived({ id: Number(params.id), data: {} as any })
+      toast.success('Funding received confirmed.')
+      refetch()
+    } catch (error) {
+      const messages = getApiErrorMessages(error)
+      messages.forEach((msg) => toast.error(msg))
+    } finally {
+      setIsFundingReceiving(false)
+    }
+  }, [params.id, fundingReceived, getApiErrorMessages, refetch])
 
   const filteredRows = rows.filter((row) => {
     if (filterLegalEntity !== 'all' && row.legalEntity !== filterLegalEntity)
@@ -428,6 +427,17 @@ export default function TVRDetailPage() {
       return false
     return true
   })
+
+  const gridErrorCells = useMemo(() => {
+    const result = new Set<string>()
+    filteredRows.forEach((row, index) => {
+      const rowErrors = errorCells.get(row.id)
+      if (rowErrors) {
+        rowErrors.forEach((colId) => result.add(`${index}-${colId}`))
+      }
+    })
+    return result
+  }, [filteredRows, errorCells])
 
   if (!isLoading && records.length === 0) {
     return (
@@ -455,22 +465,50 @@ export default function TVRDetailPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {(userRole === 'DSTAX_PREPARER' || userRole === 'DSTAX_ADMIN') && (
+          {userRole === 'DSTAX_PREPARER' && (
             <Button
               variant="default"
-              onClick={handlePrepared}
+              onClick={handlePrepare}
               disabled={isPreparing || changedRowIds.size === 0}
             >
-              {isPreparing
-                ? 'Submitting...'
-                : userRole === 'DSTAX_PREPARER'
-                  ? 'PREPARED'
-                  : 'SAVE CHANGES'}
+              {isPreparing ? 'Preparing...' : 'PREPARED'}
               {changedRowIds.size > 0 && (
                 <span className="ml-1.5 rounded-full bg-white/20 px-1.5 text-xs">
                   {changedRowIds.size}
                 </span>
               )}
+            </Button>
+          )}
+          {userRole === 'DSTAX_ADMIN' && (
+            <Button
+              variant="default"
+              onClick={handlePublish}
+              disabled={isPublishing || !allRecordsReady}
+            >
+              {isPublishing ? 'Publishing...' : 'PUBLISH'}
+            </Button>
+          )}
+          {(userRole === 'DSTAX_ADMIN' || userRole === 'CLIENT_ADMIN') && (
+            <Button
+              variant="default"
+              onClick={handleComment}
+              disabled={isCommenting || changedRowIds.size === 0}
+            >
+              {isCommenting ? 'Saving...' : 'SAVE COMMENTS'}
+              {changedRowIds.size > 0 && (
+                <span className="ml-1.5 rounded-full bg-white/20 px-1.5 text-xs">
+                  {changedRowIds.size}
+                </span>
+              )}
+            </Button>
+          )}
+          {userRole === 'DSTAX_ADMIN' && (
+            <Button
+              variant="outline"
+              onClick={handleFundingReceived}
+              disabled={isFundingReceiving || !isPublished}
+            >
+              {isFundingReceiving ? 'Processing...' : 'FUNDING RECEIVED'}
             </Button>
           )}
         </div>
@@ -517,6 +555,7 @@ export default function TVRDetailPage() {
           onChange={handleCellChange}
           className="h-full w-full"
           emptyMessage="No tax records match the current filters."
+          errorCells={gridErrorCells}
         />
       </div>
     </div>

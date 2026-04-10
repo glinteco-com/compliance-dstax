@@ -5,12 +5,16 @@
 import type { ApiCoreUserListRole } from './apiCoreUserListRole'
 
 export type ApiCoreUserListParams = {
-  assigned_legal_entities?: string
+  assigned_legal_entities?: number[]
+  assigned_legal_entities_names?: string
+  email?: string
+  email__icontains?: string
   id?: number
   /**
    * Multiple values may be separated by commas.
    */
   id__in?: number[]
+  is_active?: boolean
   managed_client?: number
   /**
    * Multiple values may be separated by commas.
