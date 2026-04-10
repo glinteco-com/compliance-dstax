@@ -74,13 +74,19 @@ export const useColumnClientUser = ({
     {
       id: 'assigned_legal_entities',
       label: 'Legal Entities',
-      render: (item) => (
-        <span className="text-zinc-700 dark:text-zinc-300">
-          {item.assigned_legal_entities?.length
-            ? item.assigned_legal_entities.map((le) => le.name).join(', ')
-            : '—'}
-        </span>
-      ),
+      render: (item) => {
+        const content = item.assigned_legal_entities?.length
+          ? item.assigned_legal_entities.map((le) => le.name).join(', ')
+          : '—'
+        return (
+          <span
+            className="block max-w-[200px] truncate text-zinc-700 dark:text-zinc-300"
+            title={content}
+          >
+            {content}
+          </span>
+        )
+      },
     },
     {
       id: 'actions',

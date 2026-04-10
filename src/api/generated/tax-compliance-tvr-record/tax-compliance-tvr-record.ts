@@ -23,10 +23,7 @@ import type {
   ApiTaxComplianceTvrRecordAddDstaxCommentsCreateParams,
   ApiTaxComplianceTvrRecordListParams,
   ApiTaxComplianceTvrRecordMarkPreparedCreateParams,
-  PaginatedTVRRecordClientCommentItemList,
-  PaginatedTVRRecordCommentItemList,
   PaginatedTVRRecordList,
-  PaginatedTVRRecordMarkPreparedItemList,
   PatchedTVRRecord,
   TVRRecord,
   TVRRecordClientCommentItem,
@@ -705,7 +702,7 @@ export const apiTaxComplianceTvrRecordAddClientCommentsCreate = (
   params?: ApiTaxComplianceTvrRecordAddClientCommentsCreateParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<PaginatedTVRRecordClientCommentItemList>({
+  return customInstance<PaginatedTVRRecordList>({
     url: `/api/tax_compliance/tvr_record/add-client-comments/`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -811,7 +808,7 @@ export const apiTaxComplianceTvrRecordAddDstaxCommentsCreate = (
   params?: ApiTaxComplianceTvrRecordAddDstaxCommentsCreateParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<PaginatedTVRRecordCommentItemList>({
+  return customInstance<PaginatedTVRRecordList>({
     url: `/api/tax_compliance/tvr_record/add-dstax-comments/`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -915,7 +912,7 @@ export const apiTaxComplianceTvrRecordMarkPreparedCreate = (
   params?: ApiTaxComplianceTvrRecordMarkPreparedCreateParams,
   signal?: AbortSignal
 ) => {
-  return customInstance<PaginatedTVRRecordMarkPreparedItemList>({
+  return customInstance<PaginatedTVRRecordList>({
     url: `/api/tax_compliance/tvr_record/mark-prepared/`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
