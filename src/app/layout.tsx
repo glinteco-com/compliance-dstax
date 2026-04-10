@@ -32,7 +32,7 @@ export default function RootLayout({
       >
         <QueryClient>
           <TooltipProvider>
-            <Toaster />
+            <Toaster richColors />
             <div vaul-drawer-wrapper="">{children}</div>
           </TooltipProvider>
         </QueryClient>

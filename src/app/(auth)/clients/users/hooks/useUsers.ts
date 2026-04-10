@@ -21,7 +21,7 @@ export const useUsers = (params: PaginationParams) => {
     ...(params.search && { search: params.search }),
     ...(params.managedClientId && { managed_client: params.managedClientId }),
     ...(params.assignedLegalEntityId && {
-      assigned_legal_entities: String(params.assignedLegalEntityId),
+      assigned_legal_entities: [params.assignedLegalEntityId],
     }),
   }
   const { data, ...rest } = useApiCoreUserList(apiParams as any)

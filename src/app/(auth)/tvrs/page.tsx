@@ -11,6 +11,7 @@ import CommonTooltip from '@/components/tooltip/CommonTooltip'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useApiTaxComplianceTvrPeriodActivesList } from '@/api/generated/tax-compliance-tvr-period/tax-compliance-tvr-period'
 import type { TVRPeriod } from '@/models'
+import { useTvrPeriodStore } from '@/store/useTvrPeriodStore'
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Draft',
@@ -34,6 +35,9 @@ const STATUS_COLORS: Record<string, string> = {
 function TVRsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const setSelectedPeriod = useTvrPeriodStore(
+    (state) => state.setSelectedPeriod
+  )
   const clientIdParam = searchParams.get('clientId')
   const legalEntityIdParam = searchParams.get('legalEntityId')
   const filterClientId = clientIdParam ? Number(clientIdParam) : null
@@ -130,6 +134,7 @@ function TVRsContent() {
             size="icon-sm"
             onClick={(e) => {
               e.stopPropagation()
+              setSelectedPeriod(record)
               const url = filterLegalEntityId
                 ? `/tvrs/${record.id}?legalEntityId=${filterLegalEntityId}`
                 : `/tvrs/${record.id}`
@@ -167,6 +172,7 @@ function TVRsContent() {
         isLoading={isLoading}
         emptyMessage="No TVR periods found"
         onRowClick={(record) => {
+          setSelectedPeriod(record)
           const url = filterLegalEntityId
             ? `/tvrs/${record.id}?legalEntityId=${filterLegalEntityId}`
             : `/tvrs/${record.id}`

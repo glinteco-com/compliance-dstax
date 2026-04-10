@@ -1,9 +1,15 @@
 import { defineConfig } from 'orval'
+import { config } from 'dotenv'
+
+config({ path: '.env.local' })
+config({ path: '.env' })
 
 export default defineConfig({
   compliance: {
     input: {
-      target: 'https://test.compliance.dstax.com/api/schema/',
+      target: process.env.NEXT_PUBLIC_API_URL
+        ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api/schema/`
+        : 'https://test.compliance.dstax.com/api/schema/',
     },
     output: {
       target: 'src/api/generated/',

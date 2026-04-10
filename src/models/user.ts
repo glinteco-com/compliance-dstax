@@ -10,6 +10,9 @@ export interface User {
   readonly id: number
   /** @maxLength 254 */
   email: string
+  password: string
+  /** Designates whether this user should be treated as active. Unselect this instead of deleting accounts. */
+  is_active?: boolean
   role: RoleEnum
   readonly managed_client: SimpleClient
   /** @nullable */

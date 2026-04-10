@@ -31,6 +31,7 @@ export interface SpreadsheetGridProps {
   stickyRowNumbers?: boolean
   rowNumbers?: boolean
   emptyMessage?: string
+  errorCells?: Set<string>
 }
 
 function formatCellValue(value: CellValue, type?: ColumnType): string {
@@ -70,6 +71,7 @@ export function SpreadsheetGrid({
   stickyRowNumbers = true,
   rowNumbers = true,
   emptyMessage = 'No data available.',
+  errorCells,
 }: SpreadsheetGridProps) {
   const [focusedCell, setFocusedCell] = React.useState<{
     row: number
@@ -302,7 +304,11 @@ export function SpreadsheetGrid({
             {data.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
-                className="group transition-colors hover:bg-orange-50/30"
+                className={cn(
+                  'group transition-colors hover:bg-orange-50',
+                  focusedCell?.row === rowIndex &&
+                    'relative z-10 ring-[1.5px] ring-orange-300 ring-inset'
+                )}
               >
                 {rowNumbers && (
                   <td
@@ -322,6 +328,7 @@ export function SpreadsheetGrid({
                   const isCheckbox = col.type === 'checkbox'
                   const isNumeric =
                     col.type === 'currency' || col.type === 'number'
+                  const hasError = errorCells?.has(`${rowIndex}-${col.id}`)
 
                   return (
                     <td
@@ -338,10 +345,13 @@ export function SpreadsheetGrid({
                       className={cn(
                         'relative border-r border-b border-zinc-200 p-0 outline-none last:border-r-0',
                         !editable && 'bg-zinc-50/50',
-                        focused && 'ring-2 ring-orange-500 ring-inset',
+                        !hasError &&
+                          focused &&
+                          'ring-2 ring-orange-500 ring-inset',
+                        hasError && 'ring-2 ring-red-500 ring-inset',
                         editable &&
                           !focused &&
-                          'cursor-text hover:bg-orange-50/50',
+                          'cursor-text hover:bg-orange-50',
                         isCheckbox && 'cursor-pointer'
                       )}
                       onClick={() => handleCellClick(rowIndex, colIndex, col)}

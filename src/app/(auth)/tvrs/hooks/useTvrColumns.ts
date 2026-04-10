@@ -59,7 +59,7 @@ export const tvrGridColumns: SpreadsheetColumn[] = [
   { id: 'dstaxComment', label: 'DSTax Comment', width: 200 },
   {
     id: 'isActive',
-    label: 'Active?',
+    label: 'Is ready',
     type: 'checkbox',
     width: 80,
     align: 'center',

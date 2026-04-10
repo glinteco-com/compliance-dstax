@@ -911,7 +911,7 @@ export const useApiTaxComplianceTvrRecordAddDstaxCommentsCreate = <
   return useMutation(mutationOptions, queryClient)
 }
 export const apiTaxComplianceTvrRecordMarkPreparedCreate = (
-  tVRRecordMarkPreparedItem: TVRRecordMarkPreparedItem[],
+  tVRRecordMarkPreparedItem: NonReadonly<TVRRecordMarkPreparedItem[]>,
   params?: ApiTaxComplianceTvrRecordMarkPreparedCreateParams,
   signal?: AbortSignal
 ) => {
@@ -933,7 +933,7 @@ export const getApiTaxComplianceTvrRecordMarkPreparedCreateMutationOptions = <
     Awaited<ReturnType<typeof apiTaxComplianceTvrRecordMarkPreparedCreate>>,
     TError,
     {
-      data: TVRRecordMarkPreparedItem[]
+      data: NonReadonly<TVRRecordMarkPreparedItem[]>
       params?: ApiTaxComplianceTvrRecordMarkPreparedCreateParams
     },
     TContext
@@ -942,7 +942,7 @@ export const getApiTaxComplianceTvrRecordMarkPreparedCreateMutationOptions = <
   Awaited<ReturnType<typeof apiTaxComplianceTvrRecordMarkPreparedCreate>>,
   TError,
   {
-    data: TVRRecordMarkPreparedItem[]
+    data: NonReadonly<TVRRecordMarkPreparedItem[]>
     params?: ApiTaxComplianceTvrRecordMarkPreparedCreateParams
   },
   TContext
@@ -959,7 +959,7 @@ export const getApiTaxComplianceTvrRecordMarkPreparedCreateMutationOptions = <
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof apiTaxComplianceTvrRecordMarkPreparedCreate>>,
     {
-      data: TVRRecordMarkPreparedItem[]
+      data: NonReadonly<TVRRecordMarkPreparedItem[]>
       params?: ApiTaxComplianceTvrRecordMarkPreparedCreateParams
     }
   > = (props) => {
@@ -976,7 +976,7 @@ export type ApiTaxComplianceTvrRecordMarkPreparedCreateMutationResult =
     Awaited<ReturnType<typeof apiTaxComplianceTvrRecordMarkPreparedCreate>>
   >
 export type ApiTaxComplianceTvrRecordMarkPreparedCreateMutationBody =
-  TVRRecordMarkPreparedItem[]
+  NonReadonly<TVRRecordMarkPreparedItem[]>
 export type ApiTaxComplianceTvrRecordMarkPreparedCreateMutationError =
   ErrorType<unknown>
 
@@ -989,7 +989,7 @@ export const useApiTaxComplianceTvrRecordMarkPreparedCreate = <
       Awaited<ReturnType<typeof apiTaxComplianceTvrRecordMarkPreparedCreate>>,
       TError,
       {
-        data: TVRRecordMarkPreparedItem[]
+        data: NonReadonly<TVRRecordMarkPreparedItem[]>
         params?: ApiTaxComplianceTvrRecordMarkPreparedCreateParams
       },
       TContext
@@ -1000,7 +1000,7 @@ export const useApiTaxComplianceTvrRecordMarkPreparedCreate = <
   Awaited<ReturnType<typeof apiTaxComplianceTvrRecordMarkPreparedCreate>>,
   TError,
   {
-    data: TVRRecordMarkPreparedItem[]
+    data: NonReadonly<TVRRecordMarkPreparedItem[]>
     params?: ApiTaxComplianceTvrRecordMarkPreparedCreateParams
   },
   TContext
