@@ -36,7 +36,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const formSchema = z.object({
-  email: z.string().email('Invalid email').optional(),
+  email: z.string().email('Invalid email').or(z.literal('')).optional(),
   password: z.string().optional(),
   role: z.string().min(1, 'Role is required'),
   managed_client: z.string().optional(),
@@ -111,16 +111,15 @@ export function UserDrawer({
     name: 'managed_client',
   })
 
-  // Fetch legal entities for the selected managed client
+  // Fetch legal entities (no longer requires a managed client to be selected)
   const { data: legalEntitiesData, isLoading: isFetchingLegalEntities } =
     useApiCoreLegalEntityList(
       {
-        client: formManagedClient ? Number(formManagedClient) : undefined,
         page_size: 100,
       },
       {
         query: {
-          enabled: open && !!formManagedClient,
+          enabled: open,
         },
       }
     )
@@ -208,7 +207,7 @@ export function UserDrawer({
       .filter((id) => !isNaN(id))
 
     const payload = {
-      email: formData.email,
+      email: formData.email || undefined,
       password: formData.password || undefined,
       role: formData.role as User['role'],
       managed_client: formData.managed_client
@@ -308,26 +307,30 @@ export function UserDrawer({
               onSubmit={handleSubmit(onSubmit)}
               className="mt-2 space-y-4"
             >
-              <FormController
-                control={control}
-                name="email"
-                Field={Input}
-                fieldProps={{
-                  label: 'Email',
-                  placeholder: 'Enter email address',
-                  type: 'email',
-                }}
-              />
-              <FormController
-                control={control}
-                name="password"
-                Field={Input}
-                fieldProps={{
-                  label: 'Password',
-                  placeholder: 'Enter password',
-                  type: 'password',
-                }}
-              />
+              {false && (
+                <>
+                  <FormController
+                    control={control}
+                    name="email"
+                    Field={Input}
+                    fieldProps={{
+                      label: 'Email',
+                      placeholder: 'Enter email address',
+                      type: 'email',
+                    }}
+                  />
+                  <FormController
+                    control={control}
+                    name="password"
+                    Field={Input}
+                    fieldProps={{
+                      label: 'Password',
+                      placeholder: 'Enter password',
+                      type: 'password',
+                    }}
+                  />
+                </>
+              )}
               <FormController
                 control={control}
                 name="role"

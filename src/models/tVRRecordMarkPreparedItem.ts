@@ -144,5 +144,5 @@ export interface TVRRecordMarkPreparedItem {
   client_comment?: string | null
   /** @nullable */
   dstax_comment?: string | null
-  is_ready?: boolean
+  readonly is_ready: boolean
 }

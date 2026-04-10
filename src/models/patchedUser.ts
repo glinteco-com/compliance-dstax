@@ -8,11 +8,9 @@ import type { SimpleLegalEntity } from './simpleLegalEntity'
 
 export interface PatchedUser {
   readonly id?: number
-  /** @maxLength 254 */
-  email?: string
-  password?: string
+  readonly email?: string
   /** Designates whether this user should be treated as active. Unselect this instead of deleting accounts. */
-  is_active?: boolean
+  readonly is_active?: boolean
   role?: RoleEnum
   readonly managed_client?: SimpleClient
   /** @nullable */
