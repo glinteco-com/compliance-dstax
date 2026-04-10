@@ -42,7 +42,6 @@ const reverseFieldMap: Record<string, keyof TVRRecord> = {
   paymentDate: 'payment_date',
   clientComment: 'client_comment',
   dstaxComment: 'dstax_comment',
-  isActive: 'is_ready',
 }
 
 const fieldToColumnMap: Record<string, string> = Object.fromEntries(
@@ -279,8 +278,13 @@ export default function TVRDetailPage() {
       const original = records.find((r) => String(r.id) === id)
       if (!original) return null
       const edits = localEdits[id] || {}
-      const item: any = { ...original }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { is_ready, isActive, ...rest } = original as any
+      const item: any = { ...rest }
+      delete item.is_ready
+      delete item.isActive
       for (const [key, value] of Object.entries(edits)) {
+        if (key === 'isActive' || key === 'is_ready') continue
         const apiField = reverseFieldMap[key]
         if (apiField) {
           if (numFields.has(apiField)) {
