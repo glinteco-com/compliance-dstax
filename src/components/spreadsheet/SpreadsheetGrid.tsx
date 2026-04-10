@@ -364,14 +364,22 @@ export function SpreadsheetGrid({
                           <input
                             type="checkbox"
                             checked={Boolean(cellValue)}
-                            disabled={!editable}
+                            readOnly={!editable}
                             tabIndex={-1}
+                            onClick={(e) => {
+                              if (!editable) e.preventDefault()
+                            }}
                             onChange={() => {
                               if (editable) {
                                 onChange?.(rowIndex, col.id, !cellValue)
                               }
                             }}
-                            className="h-4 w-4 cursor-pointer accent-orange-500"
+                            className={cn(
+                              'h-4 w-4 accent-orange-500',
+                              editable
+                                ? 'cursor-pointer'
+                                : 'cursor-default opacity-70'
+                            )}
                           />
                         </div>
                       ) : editable && activeEdit ? (

@@ -63,6 +63,7 @@ export const tvrGridColumns: SpreadsheetColumn[] = [
     type: 'checkbox',
     width: 80,
     align: 'center',
+    readOnly: true,
   },
 ]
 
@@ -84,7 +85,6 @@ const preparerEditableCols: string[] = [
   'paymentAmount',
   'filingDate',
   'paymentDate',
-  'isActive',
 ]
 
 type UserRole =
