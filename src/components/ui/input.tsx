@@ -7,18 +7,28 @@ export interface InputProps extends React.ComponentProps<'input'> {
   error?: string
   prefixIcon?: React.ReactNode
   suffixIcon?: React.ReactNode
+  containerClassName?: string
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   (
-    { className, type, label, error, prefixIcon, suffixIcon, ...props },
+    {
+      className,
+      type,
+      label,
+      error,
+      prefixIcon,
+      suffixIcon,
+      containerClassName,
+      ...props
+    },
     ref
   ) => {
     const id = React.useId()
     const inputId = props.id || id
 
     return (
-      <div className="flex w-full flex-col gap-1.5">
+      <div className={cn('flex w-full flex-col gap-1.5', containerClassName)}>
         {label && (
           <label
             htmlFor={inputId}

@@ -83,6 +83,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { CommonSelect } from '@/components/select/CommonSelect'
+import { SearchableSelect } from '@/components/select/SearchableSelect'
 import { CommonTable } from '@/components/table/CommonTable'
 import { InputDatePicker } from '@/components/date-picker/date-picker'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
@@ -367,6 +368,29 @@ export default function DemoPage() {
                 options={[
                   { value: 'opt1', label: 'Production Server' },
                   { value: 'opt2', label: 'Staging Environment' },
+                ]}
+              />
+              <SearchableSelect
+                label="SearchableSelect (client, pageSize=5)"
+                placeholder="Pick a country"
+                searchPlaceholder="Search countries..."
+                pageSize={5}
+                options={[
+                  { value: 'th', label: 'Thailand' },
+                  { value: 'us', label: 'United States' },
+                  { value: 'gb', label: 'United Kingdom' },
+                  { value: 'de', label: 'Germany' },
+                  { value: 'fr', label: 'France' },
+                  { value: 'jp', label: 'Japan' },
+                  { value: 'cn', label: 'China' },
+                  { value: 'in', label: 'India' },
+                  { value: 'br', label: 'Brazil' },
+                  { value: 'au', label: 'Australia' },
+                  { value: 'ca', label: 'Canada' },
+                  { value: 'sg', label: 'Singapore' },
+                  { value: 'kr', label: 'South Korea' },
+                  { value: 'mx', label: 'Mexico' },
+                  { value: 'za', label: 'South Africa' },
                 ]}
               />
               <Combobox

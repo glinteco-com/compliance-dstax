@@ -22,6 +22,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
+import { CommonSelect } from '@/components/select/CommonSelect'
 import { useColumnPrepaymentMethod } from './hooks/useColumnPrepaymentMethod'
 import { usePrepaymentMethods } from './hooks/usePrepaymentMethods'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -31,6 +32,7 @@ import {
   useApiTaxCompliancePrepaymentMethodsDestroy,
   getApiTaxCompliancePrepaymentMethodsListQueryKey,
 } from '@/api/generated/tax-compliance-prepayment-method/tax-compliance-prepayment-method'
+import { useApiTaxComplianceJurisdictionList } from '@/api/generated/tax-compliance-jurisdiction/tax-compliance-jurisdiction'
 import { PrepaymentMethod } from '@/models/prepaymentMethod'
 import { getApiErrorMessage } from '@/lib/utils'
 
@@ -56,6 +58,18 @@ export default function PrepaymentMethodPage() {
   >('create')
   const [selectedItem, setSelectedItem] =
     React.useState<PrepaymentMethod | null>(null)
+
+  const { data: jurisdictionsData, isLoading: isFetchingJurisdictions } =
+    useApiTaxComplianceJurisdictionList({
+      page_size: 200,
+    })
+
+  const jurisdictionOptions = React.useMemo(() => {
+    return (jurisdictionsData?.results ?? []).map((j: any) => ({
+      value: String(j.id),
+      label: j.name,
+    }))
+  }, [jurisdictionsData])
 
   const {
     isOpenDialog: isOpenDeleteDialog,
@@ -159,7 +173,7 @@ export default function PrepaymentMethodPage() {
 
     if (mode === 'edit' && item) {
       reset({
-        jurisdiction_id: item.jurisdiction_id,
+        jurisdiction_id: item.jurisdiction_id || item.jurisdiction?.id,
         method_description: item.method_description,
       })
     } else if (mode === 'create') {
@@ -305,11 +319,13 @@ export default function PrepaymentMethodPage() {
                 <FormController
                   control={control}
                   name="jurisdiction_id"
-                  Field={Input}
+                  Field={CommonSelect}
                   fieldProps={{
-                    label: 'Jurisdiction ID',
-                    placeholder: 'e.g. 1, 2, 3',
-                    type: 'number',
+                    label: 'Jurisdiction',
+                    placeholder: isFetchingJurisdictions
+                      ? 'Loading...'
+                      : 'Select jurisdiction',
+                    options: jurisdictionOptions,
                   }}
                 />
                 <FormController
