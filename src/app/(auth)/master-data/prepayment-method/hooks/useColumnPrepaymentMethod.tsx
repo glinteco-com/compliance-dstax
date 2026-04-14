@@ -21,7 +21,7 @@ export const useColumnPrepaymentMethod = ({
     {
       id: 'state',
       label: 'State',
-      width: 100,
+      width: 300,
       render: (item) => (
         <span className="font-semibold text-zinc-900 uppercase dark:text-zinc-100">
           {item.jurisdiction?.name || ''}

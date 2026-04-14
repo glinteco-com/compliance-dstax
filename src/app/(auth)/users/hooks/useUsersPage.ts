@@ -4,8 +4,8 @@ import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
 import useDialog from '@/hooks/useDialog'
-import { useColumnClientUser } from '../../clients/users/hooks/useColumnClientUser'
-import { useUsers } from '../../clients/users/hooks/useUsers'
+import { useColumnClientUser } from './useColumnClientUser'
+import { useUsers } from './useUsers'
 import { User } from '@/models/user'
 import {
   useApiCoreUserDestroy,
@@ -64,14 +64,6 @@ export function useUsersPage() {
 
   const clients = ((clientsData as unknown as PaginatedClientList)?.results ??
     []) as { id: number; name: string }[]
-
-  const clientOptions = [
-    { value: '', label: 'None' },
-    ...clients.map((c) => ({
-      value: String(c.id),
-      label: c.name,
-    })),
-  ]
 
   const clientMap = useMemo(() => {
     const map: Record<number, string> = {}
@@ -156,7 +148,6 @@ export function useUsersPage() {
     drawerMode,
     selectedUserId,
     invalidateList,
-    clientOptions,
     clientMap,
     isOpenDeleteDialog,
     setIsOpenDeleteDialog,

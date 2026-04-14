@@ -33,7 +33,6 @@ export default function UsersPage() {
     drawerMode,
     selectedUserId,
     invalidateList,
-    clientOptions,
     clientMap,
     isOpenDeleteDialog,
     setIsOpenDeleteDialog,
@@ -101,6 +100,7 @@ export default function UsersPage() {
         data={paginatedData}
         emptyMessage="No users found"
         isLoading={isLoading}
+        onRowClick={(item) => openDrawer('view', item)}
         pagination={{
           currentPage,
           totalPages,
@@ -117,7 +117,6 @@ export default function UsersPage() {
         mode={drawerMode}
         userId={selectedUserId}
         onSuccess={invalidateList}
-        clientOptions={clientOptions}
         clientMap={clientMap}
       />
 

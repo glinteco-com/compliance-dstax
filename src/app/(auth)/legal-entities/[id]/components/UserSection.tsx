@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { CommonTable, Column } from '@/components/table/CommonTable'
-import { useUsers } from '../../../clients/users/hooks/useUsers'
+import { useUsers } from '../../../users/hooks/useUsers'
 import { User } from '@/models/user'
 
 type UserWithId = User & { id: number }

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormController from '@/components/form/FormController'
 import { CommonSelect } from '@/components/select/CommonSelect'
+import { CommonCombobox } from '@/components/select/CommonCombobox'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
 import { useColumnLegalEntity } from './hooks/useColumnLegalEntity'
@@ -25,6 +26,7 @@ import {
   useApiCoreLegalEntityDestroy,
   getApiCoreLegalEntityListQueryKey,
 } from '@/api/generated/core-legal-entity/core-legal-entity'
+import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
 import {
   Drawer,
   DrawerClose,
@@ -47,6 +49,7 @@ const formSchema = z.object({
     .string()
     .min(1, 'Name is required')
     .max(255, 'Must be 255 characters or less'),
+  client_id: z.string().optional(),
   is_active: z.string().optional(),
 })
 
@@ -72,6 +75,19 @@ export default function LegalEntitiesPage() {
     onCloseDialog: onCloseDeleteDialog,
     setIsOpenDialog: setIsOpenDeleteDialog,
   } = useDialog()
+
+  const { data: allClientsData, isLoading: isFetchingAllClients } =
+    useApiCoreClientList(
+      { page_size: 200 },
+      { query: { enabled: isDrawerOpen && !selectedClient } }
+    )
+
+  const allClientOptions = React.useMemo(() => {
+    return (allClientsData?.results ?? []).map((c: any) => ({
+      value: String(c.id),
+      label: c.name,
+    }))
+  }, [allClientsData])
 
   // Client list state
   const [clientSearchInput, setClientSearchInput] = React.useState('')
@@ -175,6 +191,7 @@ export default function LegalEntitiesPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
+      client_id: '',
       is_active: 'true',
     },
   })
@@ -193,11 +210,13 @@ export default function LegalEntitiesPage() {
       reset({
         name: item.name,
         is_active: item.is_active !== false ? 'true' : 'false',
+        client_id: selectedClient ? String(selectedClient.id) : '',
       })
     } else if (mode === 'create') {
       reset({
         name: '',
         is_active: 'true',
+        client_id: selectedClient ? String(selectedClient.id) : '',
       })
     }
 
@@ -205,11 +224,18 @@ export default function LegalEntitiesPage() {
   }
 
   const onSubmit = (formData: FormValues) => {
-    if (!selectedClient) return
+    const clientId =
+      selectedClient?.id ||
+      (formData.client_id ? Number(formData.client_id) : undefined)
+
+    if (!clientId) {
+      toast.error('Please select a client.')
+      return
+    }
 
     const payload = {
       name: formData.name,
-      client: selectedClient.id,
+      client: clientId,
       is_active: formData.is_active !== 'false',
     }
 
@@ -258,101 +284,107 @@ export default function LegalEntitiesPage() {
       : {},
   })
 
-  // Client list view
-  if (!selectedClient) {
-    return (
-      <div className="min-w-0 flex-1 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Clients
-            </h2>
-            <p className="text-zinc-500 dark:text-zinc-400">
-              Select a client to view and manage their legal entities.
-            </p>
-          </div>
-          <div className="relative">
-            <Input
-              placeholder="Search clients..."
-              value={clientSearchInput}
-              onChange={(e) => setClientSearchInput(e.target.value)}
-              className="w-56"
-              prefixIcon={<Search />}
-            />
-          </div>
-        </div>
-
-        <CommonTable
-          columns={clientColumns}
-          data={clientList}
-          emptyMessage="No clients found"
-          isLoading={isLoadingClients}
-          onRowClick={handleSelectClient}
-          pagination={{
-            currentPage: clientPage,
-            totalPages: clientTotalPages,
-            onPageChange: setClientPage,
-            onPageSizeChange: (newSize) => {
-              setClientPageSize(newSize)
-              setClientPage(1)
-            },
-            pageSize: clientPageSize,
-            totalItems: clientsData?.count ?? 0,
-          }}
-        />
-      </div>
-    )
-  }
-
-  // Legal entities view for selected client
   return (
-    <div className="min-w-0 flex-1 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BackButton />
-
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {selectedClient.name}
-            </h2>
-            <p className="text-zinc-500 dark:text-zinc-400">
-              Legal entities for this client.
-            </p>
+    <>
+      {!selectedClient ? (
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                Clients
+              </h2>
+              <p className="text-zinc-500 dark:text-zinc-400">
+                Select a client to view and manage their legal entities.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Input
+                  placeholder="Search clients..."
+                  value={clientSearchInput}
+                  onChange={(e) => setClientSearchInput(e.target.value)}
+                  className="w-56"
+                  prefixIcon={<Search />}
+                />
+              </div>
+              <Button
+                className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
+                onClick={() => openDrawer('create')}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Legal Entity
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Input
-              placeholder="Search..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-56"
-              prefixIcon={<Search />}
-            />
-          </div>
-          <Button
-            className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-            onClick={() => openDrawer('create')}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add Legal Entity
-          </Button>
-        </div>
-      </div>
 
-      <CommonTable
-        columns={legalEntityColumns}
-        data={paginatedData}
-        emptyMessage="No legal entities found"
-        isLoading={isLoading}
-        pagination={{
-          currentPage,
-          totalPages,
-          onPageChange: setCurrentPage,
-          onPageSizeChange: handlePageSizeChange,
-          pageSize,
-          totalItems: data?.count ?? 0,
-        }}
-      />
+          <CommonTable
+            columns={clientColumns}
+            data={clientList}
+            emptyMessage="No clients found"
+            isLoading={isLoadingClients}
+            onRowClick={handleSelectClient}
+            pagination={{
+              currentPage: clientPage,
+              totalPages: clientTotalPages,
+              onPageChange: setClientPage,
+              onPageSizeChange: (newSize) => {
+                setClientPageSize(newSize)
+                setClientPage(1)
+              },
+              pageSize: clientPageSize,
+              totalItems: clientsData?.count ?? 0,
+            }}
+          />
+        </div>
+      ) : (
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BackButton onClick={handleBackToClients} />
+
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  {selectedClient.name}
+                </h2>
+                <p className="text-zinc-500 dark:text-zinc-400">
+                  Legal entities for this client.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Input
+                  placeholder="Search..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-56"
+                  prefixIcon={<Search />}
+                />
+              </div>
+              <Button
+                className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
+                onClick={() => openDrawer('create')}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Legal Entity
+              </Button>
+            </div>
+          </div>
+
+          <CommonTable
+            columns={legalEntityColumns}
+            data={paginatedData}
+            emptyMessage="No legal entities found"
+            isLoading={isLoading}
+            pagination={{
+              currentPage,
+              totalPages,
+              onPageChange: setCurrentPage,
+              onPageSizeChange: handlePageSizeChange,
+              pageSize,
+              totalItems: data?.count ?? 0,
+            }}
+          />
+        </div>
+      )}
 
       <Drawer
         open={isDrawerOpen}
@@ -400,7 +432,7 @@ export default function LegalEntitiesPage() {
                     Client
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-400">
-                    {selectedClient.name}
+                    {selectedClient ? selectedClient.name : '—'}
                   </span>
                 </div>
                 <div className="grid gap-1">
@@ -420,6 +452,20 @@ export default function LegalEntitiesPage() {
                 onSubmit={handleSubmit(onSubmit)}
                 className="mt-2 space-y-4"
               >
+                {!selectedClient && (
+                  <FormController
+                    control={control}
+                    name="client_id"
+                    Field={CommonCombobox}
+                    fieldProps={{
+                      label: 'Client',
+                      placeholder: isFetchingAllClients
+                        ? 'Loading...'
+                        : 'Select client',
+                      options: allClientOptions,
+                    }}
+                  />
+                )}
                 <FormController
                   control={control}
                   name="name"
@@ -472,6 +518,6 @@ export default function LegalEntitiesPage() {
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
       />
-    </div>
+    </>
   )
 }

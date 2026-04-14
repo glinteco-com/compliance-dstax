@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import FormController from '@/components/form/FormController'
 import { CommonSelect } from '@/components/select/CommonSelect'
+import { SearchableSelect } from '@/components/select/SearchableSelect'
 import { CommonCombobox } from '@/components/select/CommonCombobox'
 import {
   Drawer,
@@ -25,8 +26,11 @@ import {
   useApiCoreUserRetrieve,
 } from '@/api/generated/core-user/core-user'
 import { useApiCoreLegalEntityList } from '@/api/generated/core-legal-entity/core-legal-entity'
+import { useApiCoreClientList } from '@/api/generated/core-client/core-client'
 import { User } from '@/models/user'
+import { PaginatedClientList } from '@/models/paginatedClientList'
 import { getApiErrorMessage } from '@/lib/utils'
+import { useDebounce } from '@/hooks/useDebounce'
 
 const ROLE_LABELS: Record<string, string> = {
   DSTAX_ADMIN: 'DSTax Admin',
@@ -36,7 +40,9 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const formSchema = z.object({
-  email: z.string().email('Invalid email').or(z.literal('')).optional(),
+  email: z.string().email('Invalid email').min(1, 'Email is required'),
+  first_name: z.string().min(1, 'First name is required'),
+  last_name: z.string().min(1, 'Last name is required'),
   password: z.string().optional(),
   role: z.string().min(1, 'Role is required'),
   managed_client: z.string().optional(),
@@ -51,9 +57,10 @@ interface UserDrawerProps {
   mode: 'create' | 'edit' | 'view'
   userId: number | null
   onSuccess: () => void
-  clientOptions: { value: string; label: string }[]
   clientMap: Record<number, string>
 }
+
+const CLIENT_PAGE_SIZE = 5
 
 export function UserDrawer({
   open,
@@ -61,7 +68,6 @@ export function UserDrawer({
   mode,
   userId,
   onSuccess,
-  clientOptions,
   clientMap,
 }: UserDrawerProps) {
   const { user: sessionUser } = useSessionStore()
@@ -81,6 +87,56 @@ export function UserDrawer({
 
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Client search state for managed_client SearchableSelect
+  const [clientSearchQuery, setClientSearchQuery] = useState('')
+  const [clientPage, setClientPage] = useState(1)
+  const [accumulatedClientOptions, setAccumulatedClientOptions] = useState<
+    { value: string; label: string }[]
+  >([])
+  const debouncedClientSearch = useDebounce(clientSearchQuery, 400)
+
+  const { data: clientsData, isFetching: isFetchingClients } =
+    useApiCoreClientList(
+      {
+        name__icontains: debouncedClientSearch || undefined,
+        page: clientPage,
+        page_size: CLIENT_PAGE_SIZE,
+      },
+      { query: { enabled: open && canEditManagedClient } }
+    )
+
+  useEffect(() => {
+    const paginated = clientsData as unknown as PaginatedClientList
+    if (!paginated) return
+    const mapped = (paginated.results as { id: number; name: string }[]).map(
+      (client) => ({ value: String(client.id), label: client.name })
+    )
+    const isFirstPage = !paginated.previous
+    setAccumulatedClientOptions((previous) =>
+      isFirstPage ? mapped : [...previous, ...mapped]
+    )
+  }, [clientsData])
+
+  const clientHasMore =
+    ((clientsData as unknown as PaginatedClientList)?.next ?? null) !== null
+
+  const handleClientSearch = useCallback((query: string) => {
+    setClientSearchQuery(query)
+    setClientPage(1)
+  }, [])
+
+  const handleClientLoadMore = useCallback(() => {
+    setClientPage((previous) => previous + 1)
+  }, [])
+
+  useEffect(() => {
+    if (!open) {
+      setClientSearchQuery('')
+      setClientPage(1)
+      setAccumulatedClientOptions([])
+    }
+  }, [open])
+
   const { data: userData, isLoading: isFetchingUser } = useApiCoreUserRetrieve(
     userId as number,
     {
@@ -95,10 +151,12 @@ export function UserDrawer({
     label: ROLE_LABELS[value] ?? value,
   }))
 
-  const { control, reset, handleSubmit } = useForm<FormValues>({
+  const { control, reset, handleSubmit, setValue } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
+      first_name: '',
+      last_name: '',
       password: '',
       role: '',
       managed_client: '',
@@ -111,18 +169,27 @@ export function UserDrawer({
     name: 'managed_client',
   })
 
-  // Fetch legal entities (no longer requires a managed client to be selected)
+  // Fetch legal entities filtered by managed client
   const { data: legalEntitiesData, isLoading: isFetchingLegalEntities } =
     useApiCoreLegalEntityList(
       {
         page_size: 100,
+        client: formManagedClient ? Number(formManagedClient) : undefined,
       },
       {
         query: {
-          enabled: open,
+          enabled: open && !!formManagedClient,
         },
       }
     )
+
+  // Reset legal entities when managed client changes (unless we are just initializing the form)
+  useEffect(() => {
+    if (open && currentMode === 'create' && formManagedClient) {
+      setValue('assigned_legal_entity_ids', [])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formManagedClient])
 
   const legalEntityOptions = useMemo(() => {
     const list = legalEntitiesData?.results ?? []
@@ -148,6 +215,8 @@ export function UserDrawer({
       if (currentMode === 'create') {
         reset({
           email: '',
+          first_name: '',
+          last_name: '',
           password: '',
           role: '',
           managed_client:
@@ -158,6 +227,9 @@ export function UserDrawer({
         })
       } else if (userData) {
         reset({
+          email: (userData as any).email || '',
+          first_name: (userData as any).first_name || '',
+          last_name: (userData as any).last_name || '',
           role: userData.role,
           managed_client: userData.managed_client
             ? typeof userData.managed_client === 'object'
@@ -170,7 +242,7 @@ export function UserDrawer({
         })
       }
     }
-  }, [open, currentMode, userData, reset])
+  }, [open, currentMode, userData, reset, canEditManagedClient, sessionUser])
 
   const { mutate: createUser, isPending: isCreating } = useApiCoreUserCreate({
     mutation: {
@@ -207,7 +279,9 @@ export function UserDrawer({
       .filter((id) => !isNaN(id))
 
     const payload = {
-      email: formData.email || undefined,
+      email: formData.email,
+      first_name: formData.first_name,
+      last_name: formData.last_name,
       password: formData.password || undefined,
       role: formData.role as User['role'],
       managed_client: formData.managed_client
@@ -307,18 +381,40 @@ export function UserDrawer({
               onSubmit={handleSubmit(onSubmit)}
               className="mt-2 space-y-4"
             >
-              {false && (
-                <>
+              <>
+                <FormController
+                  control={control}
+                  name="email"
+                  Field={Input}
+                  fieldProps={{
+                    label: 'Email',
+                    placeholder: 'Enter email address',
+                    type: 'email',
+                  }}
+                />
+                <div className="flex gap-4">
                   <FormController
                     control={control}
-                    name="email"
+                    name="first_name"
                     Field={Input}
                     fieldProps={{
-                      label: 'Email',
-                      placeholder: 'Enter email address',
-                      type: 'email',
+                      containerClassName: 'flex-1',
+                      label: 'First Name',
+                      placeholder: 'Enter first name',
                     }}
                   />
+                  <FormController
+                    control={control}
+                    name="last_name"
+                    Field={Input}
+                    fieldProps={{
+                      containerClassName: 'flex-1',
+                      label: 'Last Name',
+                      placeholder: 'Enter last name',
+                    }}
+                  />
+                </div>
+                {currentMode === 'create' && (
                   <FormController
                     control={control}
                     name="password"
@@ -329,8 +425,8 @@ export function UserDrawer({
                       type: 'password',
                     }}
                   />
-                </>
-              )}
+                )}
+              </>
               <FormController
                 control={control}
                 name="role"
@@ -345,11 +441,16 @@ export function UserDrawer({
               <FormController
                 control={control}
                 name="managed_client"
-                Field={CommonSelect}
+                Field={SearchableSelect}
                 fieldProps={{
                   label: 'Managed Client',
                   placeholder: 'Select a client',
-                  options: clientOptions,
+                  options: accumulatedClientOptions,
+                  onSearch: handleClientSearch,
+                  onLoadMore: handleClientLoadMore,
+                  hasMore: clientHasMore,
+                  loading: isFetchingClients,
+                  pageSize: CLIENT_PAGE_SIZE,
                   disabled: !canEditManagedClient || isDisablingForm,
                 }}
               />

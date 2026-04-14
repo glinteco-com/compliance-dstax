@@ -6,14 +6,17 @@ import { CommonTable } from '@/components/table/CommonTable'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useLegalEntities } from '../legal-entities/hooks/useLegalEntities'
 import { useTvrPeriods } from '../../tvrs/hooks/useTvrPeriods'
-import { useUsers } from '../users/hooks/useUsers'
+import { useUsers } from '../../users/hooks/useUsers'
 import { LegalEntity } from '@/models/legalEntity'
 import { TVRPeriod } from '@/models/tVRPeriod'
 import { User } from '@/models/user'
 import { Column } from '@/components/table/CommonTable'
 import { Input } from '@/components/ui/input'
-import { Search } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Search, Plus } from 'lucide-react'
 import { RoleEnum } from '@/models/roleEnum'
+import { useRole } from '@/lib/auth/role-utils'
+import { CreateLegalEntityDrawer } from '../../legal-entities/components/CreateLegalEntityDrawer'
 
 type LegalEntityWithId = LegalEntity & { id: number }
 type TVRPeriodWithId = TVRPeriod & { id: number }
@@ -61,6 +64,8 @@ export function ClientDetailView({
   showUsers = false,
 }: ClientDetailViewProps) {
   const router = useRouter()
+  const { isDstaxAdmin } = useRole()
+  const [isCreateLeDrawerOpen, setIsCreateLeDrawerOpen] = React.useState(false)
 
   // Legal entities
   const [leSearchInput, setLeSearchInput] = React.useState('')
@@ -231,111 +236,128 @@ export function ClientDetailView({
   ]
 
   return (
-    <div className="space-y-8">
-      {/* Client Info */}
-      <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-        <h3 className="mb-3 text-sm font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
-          Client Information
-        </h3>
-        <div className="grid gap-1">
-          <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-            {clientName}
-          </span>
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">
-            ID: {clientId}
-          </span>
-        </div>
-      </div>
-
-      {/* Legal Entities */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Legal Entities
+    <>
+      <div className="space-y-8">
+        {/* Client Info */}
+        <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <h3 className="mb-3 text-sm font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+            Client Information
           </h3>
-          <div>
-            <Input
-              placeholder="Search..."
-              value={leSearchInput}
-              onChange={(e) => setLeSearchInput(e.target.value)}
-              className="w-48"
-              prefixIcon={<Search />}
-            />
+          <div className="grid gap-1">
+            <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+              {clientName}
+            </span>
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              ID: {clientId}
+            </span>
           </div>
         </div>
 
-        <CommonTable
-          columns={leColumns}
-          data={legalEntities}
-          emptyMessage="No legal entities found"
-          isLoading={isLoadingLe}
-          onRowClick={(item) => router.push(`/legal-entities/${item.id}`)}
-          pagination={{
-            currentPage: lePage,
-            totalPages: leTotalPages,
-            onPageChange: setLePage,
-            onPageSizeChange: (s) => {
-              setLePageSize(s)
-              setLePage(1)
-            },
-            pageSize: lePageSize,
-            totalItems: leData?.count ?? 0,
-          }}
-        />
-      </div>
-
-      {/* TVR Periods */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          TVR Periods
-        </h3>
-
-        <CommonTable
-          columns={tvrColumns}
-          data={tvrPeriods}
-          emptyMessage="No TVR periods found"
-          isLoading={isLoadingTvr}
-          onRowClick={(item) => router.push(`/tvrs/${item.id}`)}
-          pagination={{
-            currentPage: tvrPage,
-            totalPages: tvrTotalPages,
-            onPageChange: setTvrPage,
-            onPageSizeChange: (s) => {
-              setTvrPageSize(s)
-              setTvrPage(1)
-            },
-            pageSize: tvrPageSize,
-            totalItems: tvrData?.count ?? 0,
-          }}
-        />
-      </div>
-
-      {/* Users — only for Client Admin */}
-      {showUsers && (
+        {/* Legal Entities */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Users
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Legal Entities
+            </h3>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search..."
+                value={leSearchInput}
+                onChange={(e) => setLeSearchInput(e.target.value)}
+                className="w-48"
+                prefixIcon={<Search />}
+              />
+              {isDstaxAdmin && (
+                <Button
+                  className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
+                  onClick={() => setIsCreateLeDrawerOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Legal Entity
+                </Button>
+              )}
+            </div>
+          </div>
 
           <CommonTable
-            columns={usersColumns}
-            data={users}
-            emptyMessage="No users found"
-            isLoading={isLoadingUsers}
+            columns={leColumns}
+            data={legalEntities}
+            emptyMessage="No legal entities found"
+            isLoading={isLoadingLe}
+            onRowClick={(item) => router.push(`/legal-entities/${item.id}`)}
             pagination={{
-              currentPage: usersPage,
-              totalPages: usersTotalPages,
-              onPageChange: setUsersPage,
+              currentPage: lePage,
+              totalPages: leTotalPages,
+              onPageChange: setLePage,
               onPageSizeChange: (s) => {
-                setUsersPageSize(s)
-                setUsersPage(1)
+                setLePageSize(s)
+                setLePage(1)
               },
-              pageSize: usersPageSize,
-              totalItems: usersData?.count ?? 0,
+              pageSize: lePageSize,
+              totalItems: leData?.count ?? 0,
             }}
           />
         </div>
-      )}
-    </div>
+
+        {/* TVR Periods */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            TVR Periods
+          </h3>
+
+          <CommonTable
+            columns={tvrColumns}
+            data={tvrPeriods}
+            emptyMessage="No TVR periods found"
+            isLoading={isLoadingTvr}
+            onRowClick={(item) => router.push(`/tvrs/${item.id}`)}
+            pagination={{
+              currentPage: tvrPage,
+              totalPages: tvrTotalPages,
+              onPageChange: setTvrPage,
+              onPageSizeChange: (s) => {
+                setTvrPageSize(s)
+                setTvrPage(1)
+              },
+              pageSize: tvrPageSize,
+              totalItems: tvrData?.count ?? 0,
+            }}
+          />
+        </div>
+
+        {/* Users — only for Client Admin */}
+        {showUsers && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Users
+            </h3>
+
+            <CommonTable
+              columns={usersColumns}
+              data={users}
+              emptyMessage="No users found"
+              isLoading={isLoadingUsers}
+              pagination={{
+                currentPage: usersPage,
+                totalPages: usersTotalPages,
+                onPageChange: setUsersPage,
+                onPageSizeChange: (s) => {
+                  setUsersPageSize(s)
+                  setUsersPage(1)
+                },
+                pageSize: usersPageSize,
+                totalItems: usersData?.count ?? 0,
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      <CreateLegalEntityDrawer
+        open={isCreateLeDrawerOpen}
+        onOpenChange={setIsCreateLeDrawerOpen}
+        clientOptions={[]}
+        defaultClientId={String(clientId)}
+      />
+    </>
   )
 }
