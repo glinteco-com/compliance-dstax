@@ -4,22 +4,8 @@ import * as React from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useSessionStore } from '@/store/useSessionStore'
-import {
-  Building2,
-  Users,
-  Calculator,
-  CalendarDays,
-  FileBadge,
-  Landmark,
-  CreditCard,
-  ClipboardList,
-  Ticket,
-  ChevronRight,
-  Database,
-  Globe,
-  Layers,
-  User,
-} from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import { navigationItems, type NavigationItem } from '@/config/navigation'
 
 import {
   Sidebar,
@@ -34,94 +20,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar'
 
-/**
- * scope values:
- *   'dstax'       — DSTAX_ADMIN or DSTAX_PREPARER
- *   'dstax_admin' — DSTAX_ADMIN only
- *   'client'      — CLIENT_ADMIN or CLIENT_STAFF
- *   undefined     — visible to everyone
- */
-interface NavigationItem {
-  title: string
-  url?: string
-  icon?: React.ReactNode
-  scope?: 'dstax' | 'dstax_admin' | 'client'
-  items?: NavigationItem[]
-}
-
-const items: NavigationItem[] = [
-  // Client roles — singular "Client" pointing to their own client dashboard
-  {
-    title: 'Client',
-    url: '/client',
-    icon: <User className="h-4 w-4" />,
-    scope: 'client',
-  },
-  // Dstax roles — plural "Clients" list
-  {
-    title: 'Clients',
-    url: '/clients',
-    icon: <Users className="h-4 w-4" />,
-    scope: 'dstax',
-  },
-  // Legal Entities — root level, Dstax roles
-  {
-    title: 'Legal Entities',
-    url: '/legal-entities',
-    icon: <Building2 className="h-4 w-4" />,
-    scope: 'dstax',
-  },
-  // Users — root level, Dstax Admin only
-  {
-    title: 'Users',
-    url: '/users',
-    icon: <Users className="h-4 w-4" />,
-    scope: 'dstax_admin',
-  },
-  {
-    title: 'Master Data',
-    icon: <Database className="h-4 w-4" />,
-    scope: 'dstax',
-    items: [
-      {
-        title: 'Jurisdictions',
-        icon: <Globe className="h-4 w-4" />,
-        url: '/master-data/jurisdictions',
-      },
-      {
-        title: 'Jurisdiction Level',
-        url: '/master-data/jurisdictions-level',
-        icon: <Layers className="h-4 w-4" />,
-      },
-      {
-        title: 'Filing Frequencies',
-        url: '/master-data/filing-frequencies',
-        icon: <CalendarDays className="h-4 w-4" />,
-      },
-      {
-        title: 'Filing Type',
-        url: '/master-data/filing-type',
-        icon: <FileBadge className="h-4 w-4" />,
-      },
-      {
-        title: 'Tax Type',
-        url: '/master-data/tax-type',
-        icon: <Landmark className="h-4 w-4" />,
-      },
-      {
-        title: 'Prepayment Method',
-        url: '/master-data/prepayment-method',
-        icon: <CreditCard className="h-4 w-4" />,
-      },
-    ],
-  },
-  { title: 'TVRs', url: '/tvrs', icon: <ClipboardList className="h-4 w-4" /> },
-  {
-    title: 'Support Tickets',
-    url: '/support-tickets',
-    icon: <Ticket className="h-4 w-4" />,
-  },
-]
+const items = navigationItems
 
 function isItemVisible(
   item: NavigationItem,

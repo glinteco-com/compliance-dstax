@@ -17,6 +17,24 @@ const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 60000, // 60 seconds timeout
+  paramsSerializer: {
+    serialize: (params) => {
+      const searchParams = new URLSearchParams()
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null) return
+        if (Array.isArray(value)) {
+          if (key.endsWith('__in')) {
+            searchParams.append(key, value.join(','))
+          } else {
+            value.forEach((v) => searchParams.append(key, String(v)))
+          }
+        } else {
+          searchParams.append(key, String(value))
+        }
+      })
+      return searchParams.toString()
+    },
+  },
 })
 
 let isRefreshing = false

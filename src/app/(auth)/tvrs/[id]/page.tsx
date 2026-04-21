@@ -21,6 +21,23 @@ import { tvrGridColumns, useTvrColumns } from '../hooks/useTvrColumns'
 import { useSessionStore } from '@/store/useSessionStore'
 import { useTvrPeriodStore } from '@/store/useTvrPeriodStore'
 import { BackButton } from '@/components/button/BackButton'
+import { PanelRight } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { useEfileRecords } from '../efile/hooks/useEfileRecords'
+import { useCreditCarryforwards } from '../credit-carryforwards/hooks/useCreditCarryforwards'
 
 const reverseFieldMap: Record<string, keyof TVRRecord> = {
   glAmount: 'gl_amount',
@@ -183,6 +200,13 @@ export default function TVRDetailPage() {
   const [filterTaxType, setFilterTaxType] = useState('all')
   const [filterFilingFrequency, setFilterFilingFrequency] = useState('all')
   const [filterFilingType, setFilterFilingType] = useState('all')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+  const { data: efileData } = useEfileRecords({ page_size: 100 })
+  const { data: creditData } = useCreditCarryforwards({ page_size: 100 })
+
+  const efileRows = efileData?.results ?? []
+  const creditRows = creditData?.results ?? []
 
   const filterOptions = useMemo(() => {
     const unique = (arr: string[]) =>
@@ -469,6 +493,14 @@ export default function TVRDetailPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          {/* <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsSidebarOpen(true)}
+            title="Show supplemental info"
+          >
+            <PanelRight className="h-4 w-4" />
+          </Button> */}
           {userRole === 'DSTAX_PREPARER' && (
             <Button
               variant="default"
@@ -562,6 +594,138 @@ export default function TVRDetailPage() {
           errorCells={gridErrorCells}
         />
       </div>
+
+      <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+        <SheetContent
+          side="right"
+          className="w-[480px] overflow-y-auto sm:max-w-[480px]"
+        >
+          <SheetHeader className="mb-4">
+            <SheetTitle>Supplemental Info</SheetTitle>
+          </SheetHeader>
+
+          {/* EFILE mini-table */}
+          <div className="mb-6">
+            <h3 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+              EFILE Information
+            </h3>
+            <div className="rounded-md border bg-white dark:bg-zinc-950">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-9 text-xs font-semibold">
+                      Legal Entity
+                    </TableHead>
+                    <TableHead className="h-9 text-xs font-semibold">
+                      State/Jur.
+                    </TableHead>
+                    <TableHead className="h-9 text-xs font-semibold">
+                      Acct #
+                    </TableHead>
+                    <TableHead className="h-9 text-xs font-semibold">
+                      User
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {efileRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-4 text-center text-xs text-zinc-400"
+                      >
+                        No EFILE records
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    efileRows.map((row) => (
+                      <TableRow key={row.id} className="h-10">
+                        <TableCell className="text-xs">
+                          {row.legal_entity}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {row.state_jurisdiction}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {row.account_number}
+                        </TableCell>
+                        <TableCell className="text-xs">{row.user}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Credit Carryforwards mini-table */}
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+              Credit Carryforwards
+            </h3>
+            <div className="rounded-md border bg-white dark:bg-zinc-950">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-9 text-xs font-semibold">
+                      Legal Entity
+                    </TableHead>
+                    <TableHead className="h-9 text-xs font-semibold">
+                      State
+                    </TableHead>
+                    <TableHead className="h-9 text-right text-xs font-semibold">
+                      Prior
+                    </TableHead>
+                    <TableHead className="h-9 text-right text-xs font-semibold">
+                      Ending
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {creditRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-4 text-center text-xs text-zinc-400"
+                      >
+                        No credit carryforward records
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    creditRows.map((row) => {
+                      const priorNum = parseFloat(row.prior_amount)
+                      const endingNum = parseFloat(row.ending_amount)
+                      const fmt = (n: number) =>
+                        new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                        }).format(n)
+                      return (
+                        <TableRow key={row.id} className="h-10">
+                          <TableCell className="text-xs">
+                            {row.legal_entity}
+                          </TableCell>
+                          <TableCell className="text-xs">{row.state}</TableCell>
+                          <TableCell
+                            className={`text-right font-mono text-xs ${priorNum < 0 ? 'text-red-600 dark:text-red-400' : ''}`}
+                          >
+                            {fmt(priorNum)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-mono text-xs ${endingNum < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}
+                          >
+                            {fmt(endingNum)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
