@@ -96,6 +96,8 @@ function SidebarProvider({
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
+    /* 
+    DISABLED: Currently conflicts with Tiptap HtmlEditor (Mod+B for bold)
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
@@ -108,6 +110,7 @@ function SidebarProvider({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+    */
   }, [toggleSidebar])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
