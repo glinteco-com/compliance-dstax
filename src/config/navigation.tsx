@@ -132,7 +132,7 @@ export const navigationItems: NavigationItem[] = [
     title: 'Communications',
     icon: <Mail className="h-4 w-4" />,
     url: '/communications',
-    scope: 'dstax',
+    scope: 'dstax_admin',
   },
 ]
 
