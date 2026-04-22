@@ -106,16 +106,16 @@ export const navigationItems: NavigationItem[] = [
         url: '/tvrs',
         icon: <ClipboardList className="h-4 w-4" />,
       },
-      // {
-      //   title: 'EFILE',
-      //   url: '/tvrs/efile',
-      //   icon: <FileKey className="h-4 w-4" />,
-      // },
-      // {
-      //   title: 'Credit Carryforwards',
-      //   url: '/tvrs/credit-carryforwards',
-      //   icon: <TrendingUp className="h-4 w-4" />,
-      // },
+      {
+        title: 'EFILE',
+        url: '/tvrs/efile',
+        icon: <FileKey className="h-4 w-4" />,
+      },
+      {
+        title: 'Credit Carryforwards',
+        url: '/tvrs/credit-carryforwards',
+        icon: <TrendingUp className="h-4 w-4" />,
+      },
     ],
   },
   // {
@@ -145,13 +145,23 @@ function matchItems(
   pathname: string,
   navItems: NavigationItem[]
 ): BreadcrumbSegment[] {
+  // Pass 1: try exact matches (and grouped children) before any startsWith fallback
   for (const item of navItems) {
     if (item.items) {
-      // Check children first (exact match)
       const childCrumbs = matchItems(pathname, item.items)
       if (childCrumbs.length > 0) {
         return [{ title: item.title }, ...childCrumbs]
       }
+    } else {
+      if (item.url === pathname) {
+        return [{ title: item.title, url: item.url }]
+      }
+    }
+  }
+
+  // Pass 2: fall back to startsWith for dynamic sub-routes
+  for (const item of navItems) {
+    if (item.items) {
       // Check if pathname starts with any child url (dynamic sub-routes)
       for (const child of item.items) {
         if (child.url && pathname.startsWith(child.url + '/')) {
@@ -159,15 +169,13 @@ function matchItems(
         }
       }
     } else {
-      if (item.url === pathname) {
-        return [{ title: item.title, url: item.url }]
-      }
       // Dynamic sub-route of a leaf item (e.g. /tvrs/123 under /tvrs)
       if (item.url && pathname.startsWith(item.url + '/')) {
         return [{ title: item.title, url: item.url }]
       }
     }
   }
+
   return []
 }
 

@@ -55,16 +55,15 @@ export const tvrGridColumns: SpreadsheetColumn[] = [
   currencyCol('paymentAmount', 'Payment Amount'),
   { id: 'filingDate', label: 'Filing Date', type: 'date', width: 120 },
   { id: 'paymentDate', label: 'Payment Date', type: 'date', width: 120 },
-  { id: 'clientComment', label: 'Client Comment', width: 200 },
-  { id: 'dstaxComment', label: 'DSTax Comment', width: 200 },
   {
     id: 'isActive',
     label: 'Is ready',
     type: 'checkbox',
     width: 80,
     align: 'center',
-    readOnly: true,
   },
+  { id: 'clientComment', label: 'Client Comment', width: 200, pinRight: true },
+  { id: 'dstaxComment', label: 'DSTax Comment', width: 200, pinRight: true },
 ]
 
 const preparerEditableCols: string[] = [
@@ -85,6 +84,7 @@ const preparerEditableCols: string[] = [
   'paymentAmount',
   'filingDate',
   'paymentDate',
+  'isActive',
 ]
 
 type UserRole =

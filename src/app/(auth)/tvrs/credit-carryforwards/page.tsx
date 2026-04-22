@@ -8,6 +8,13 @@ import { toast } from 'sonner'
 import { CommonTable } from '@/components/table/CommonTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Plus, Search } from 'lucide-react'
 import useDialog from '@/hooks/useDialog'
 import { ConfirmDialog } from '@/components/dialog/ConfirmDialog'
@@ -75,18 +82,34 @@ export default function CreditCarryforwardsPage() {
   const [searchInput, setSearchInput] = React.useState('')
   const search = useDebounce(searchInput, 400)
 
+  const [stateFilter, setStateFilter] = React.useState('')
+  const [clientFilter, setClientFilter] = React.useState('')
+
   const [currentPage, setCurrentPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
 
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [search])
+  }, [search, stateFilter, clientFilter])
 
   const { data, isLoading } = useCreditCarryforwards({
     page: currentPage,
     page_size: pageSize,
     search: search || undefined,
+    state: stateFilter || undefined,
+    legal_entity: clientFilter || undefined,
   })
+
+  // Derive unique option lists from the current page's results
+  const stateOptions = React.useMemo(() => {
+    const set = new Set((data?.results ?? []).map((r) => r.state))
+    return Array.from(set).sort()
+  }, [data])
+
+  const clientOptions = React.useMemo(() => {
+    const set = new Set((data?.results ?? []).map((r) => r.legal_entity))
+    return Array.from(set).sort()
+  }, [data])
 
   const paginatedData = data?.results ?? []
   const totalPages = Math.ceil((data?.count ?? 0) / pageSize)
@@ -205,7 +228,47 @@ export default function CreditCarryforwardsPage() {
             Manage credit carryforward amounts by legal entity and state.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* State filter */}
+          <Select
+            value={stateFilter}
+            onValueChange={(val) =>
+              setStateFilter(val === '__all__' ? '' : val)
+            }
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="State/Jurisdiction" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All States</SelectItem>
+              {stateOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Client (Legal Entity) filter */}
+          <Select
+            value={clientFilter}
+            onValueChange={(val) =>
+              setClientFilter(val === '__all__' ? '' : val)
+            }
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Clients</SelectItem>
+              {clientOptions.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <div className="relative">
             <Input
               placeholder="Search..."

@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { SpreadsheetGrid } from '@/components/spreadsheet/SpreadsheetGrid'
-import { CommonSelect } from '@/components/select/CommonSelect'
 import { toast } from 'sonner'
 import {
   useApiTaxComplianceTvrRecordList,
@@ -20,24 +19,17 @@ import type { TVRRecord } from '@/models'
 import { tvrGridColumns, useTvrColumns } from '../hooks/useTvrColumns'
 import { useSessionStore } from '@/store/useSessionStore'
 import { useTvrPeriodStore } from '@/store/useTvrPeriodStore'
-import { BackButton } from '@/components/button/BackButton'
-import { PanelRight } from 'lucide-react'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { useEfileRecords } from '../efile/hooks/useEfileRecords'
 import { useCreditCarryforwards } from '../credit-carryforwards/hooks/useCreditCarryforwards'
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable'
+import type { PanelImperativeHandle } from 'react-resizable-panels'
+import { TVRActionBar } from './components/TVRActionBar'
+import { TVRFilters } from './components/TVRFilters'
+import { TVRSupplementalPanel } from './components/TVRSupplementalPanel'
 
 const reverseFieldMap: Record<string, keyof TVRRecord> = {
   glAmount: 'gl_amount',
@@ -115,7 +107,6 @@ export default function TVRDetailPage() {
   const { visibleColumns, allowedEditableCols } = useTvrColumns(userRole)
 
   const records = data?.results ?? []
-
   const clientName = records[0]?.period?.client?.name
 
   const mapRecord = useCallback(
@@ -185,6 +176,17 @@ export default function TVRDetailPage() {
   )
 
   const [filterLegalEntity, setFilterLegalEntity] = useState('all')
+  const [filterJurisdiction, setFilterJurisdiction] = useState('all')
+  const [filterTaxType, setFilterTaxType] = useState('all')
+  const [filterFilingFrequency, setFilterFilingFrequency] = useState('all')
+  const [filterFilingType, setFilterFilingType] = useState('all')
+
+  const supplementalPanelRef = useRef<PanelImperativeHandle>(null)
+
+  const { data: efileData } = useEfileRecords({ page_size: 100 })
+  const { data: creditData } = useCreditCarryforwards({ page_size: 100 })
+  const efileRows = efileData?.results ?? []
+  const creditRows = creditData?.results ?? []
 
   useEffect(() => {
     if (legalEntityId && records.length > 0) {
@@ -196,17 +198,6 @@ export default function TVRDetailPage() {
       }
     }
   }, [legalEntityId, records])
-  const [filterJurisdiction, setFilterJurisdiction] = useState('all')
-  const [filterTaxType, setFilterTaxType] = useState('all')
-  const [filterFilingFrequency, setFilterFilingFrequency] = useState('all')
-  const [filterFilingType, setFilterFilingType] = useState('all')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-
-  const { data: efileData } = useEfileRecords({ page_size: 100 })
-  const { data: creditData } = useCreditCarryforwards({ page_size: 100 })
-
-  const efileRows = efileData?.results ?? []
-  const creditRows = creditData?.results ?? []
 
   const filterOptions = useMemo(() => {
     const unique = (arr: string[]) =>
@@ -440,6 +431,16 @@ export default function TVRDetailPage() {
     }
   }, [params.id, fundingReceived, getApiErrorMessages, refetch])
 
+  const handleTogglePanel = useCallback(() => {
+    const panel = supplementalPanelRef.current
+    if (!panel) return
+    if (panel.isCollapsed()) {
+      panel.expand()
+    } else {
+      panel.collapse()
+    }
+  }, [])
+
   const filteredRows = rows.filter((row) => {
     if (filterLegalEntity !== 'all' && row.legalEntity !== filterLegalEntity)
       return false
@@ -484,248 +485,60 @@ export default function TVRDetailPage() {
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col space-y-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <BackButton />
-
-          <h1 className="text-2xl font-bold tracking-tight">
-            TVR — {clientName ?? 'Loading...'}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsSidebarOpen(true)}
-            title="Show supplemental info"
-          >
-            <PanelRight className="h-4 w-4" />
-          </Button> */}
-          {userRole === 'DSTAX_PREPARER' && (
-            <Button
-              variant="default"
-              onClick={handlePrepare}
-              disabled={isPreparing || changedRowIds.size === 0}
-            >
-              {isPreparing ? 'Preparing...' : 'PREPARED'}
-              {changedRowIds.size > 0 && (
-                <span className="ml-1.5 rounded-full bg-white/20 px-1.5 text-xs">
-                  {changedRowIds.size}
-                </span>
-              )}
-            </Button>
-          )}
-          {userRole === 'DSTAX_ADMIN' && (
-            <Button
-              variant="default"
-              onClick={handlePublish}
-              disabled={isPublishing || !allRecordsReady}
-            >
-              {isPublishing ? 'Publishing...' : 'PUBLISH'}
-            </Button>
-          )}
-          {(userRole === 'DSTAX_ADMIN' || userRole === 'CLIENT_ADMIN') && (
-            <Button
-              variant="default"
-              onClick={handleComment}
-              disabled={isCommenting || changedRowIds.size === 0}
-            >
-              {isCommenting ? 'Saving...' : 'SAVE COMMENTS'}
-              {changedRowIds.size > 0 && (
-                <span className="ml-1.5 rounded-full bg-white/20 px-1.5 text-xs">
-                  {changedRowIds.size}
-                </span>
-              )}
-            </Button>
-          )}
-          {userRole === 'DSTAX_ADMIN' && (
-            <Button
-              variant="outline"
-              onClick={handleFundingReceived}
-              disabled={isFundingReceiving || !isPublished}
-            >
-              {isFundingReceiving ? 'Processing...' : 'FUNDING RECEIVED'}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="relative z-10 grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <CommonSelect
-          placeholder="All Legal Entities"
-          options={filterOptions.legalEntities}
-          value={filterLegalEntity}
-          onChange={(v) => setFilterLegalEntity(String(v))}
-        />
-        <CommonSelect
-          placeholder="All Jurisdictions"
-          options={filterOptions.jurisdictions}
-          value={filterJurisdiction}
-          onChange={(v) => setFilterJurisdiction(String(v))}
-        />
-        <CommonSelect
-          placeholder="All Tax Types"
-          options={filterOptions.taxTypes}
-          value={filterTaxType}
-          onChange={(v) => setFilterTaxType(String(v))}
-        />
-        <CommonSelect
-          placeholder="All Frequencies"
-          options={filterOptions.filingFrequencies}
-          value={filterFilingFrequency}
-          onChange={(v) => setFilterFilingFrequency(String(v))}
-        />
-        <CommonSelect
-          placeholder="All Filing Types"
-          options={filterOptions.filingTypes}
-          value={filterFilingType}
-          onChange={(v) => setFilterFilingType(String(v))}
-        />
-      </div>
-
-      <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto">
-        <SpreadsheetGrid
-          columns={visibleColumns}
-          data={filteredRows}
-          editableColumns={allowedEditableCols}
-          onChange={handleCellChange}
-          className="h-full w-full"
-          emptyMessage="No tax records match the current filters."
-          errorCells={gridErrorCells}
-        />
-      </div>
-
-      <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-        <SheetContent
-          side="right"
-          className="w-[480px] overflow-y-auto sm:max-w-[480px]"
+      <TVRActionBar
+        userRole={userRole}
+        clientName={clientName}
+        changedRowIds={changedRowIds}
+        allRecordsReady={allRecordsReady}
+        isPublished={isPublished}
+        isPreparing={isPreparing}
+        isPublishing={isPublishing}
+        isCommenting={isCommenting}
+        isFundingReceiving={isFundingReceiving}
+        onPrepare={handlePrepare}
+        onPublish={handlePublish}
+        onComment={handleComment}
+        onFundingReceived={handleFundingReceived}
+        onTogglePanel={handleTogglePanel}
+      />
+      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+        <ResizablePanel defaultSize={'75%'} minSize={'50%'}>
+          <div className="flex h-full min-h-0 flex-col gap-3 pr-1">
+            <TVRFilters
+              filterOptions={filterOptions}
+              filterLegalEntity={filterLegalEntity}
+              setFilterLegalEntity={setFilterLegalEntity}
+              filterJurisdiction={filterJurisdiction}
+              setFilterJurisdiction={setFilterJurisdiction}
+              filterTaxType={filterTaxType}
+              setFilterTaxType={setFilterTaxType}
+              filterFilingFrequency={filterFilingFrequency}
+              setFilterFilingFrequency={setFilterFilingFrequency}
+              filterFilingType={filterFilingType}
+              setFilterFilingType={setFilterFilingType}
+            />
+            <SpreadsheetGrid
+              columns={visibleColumns}
+              data={filteredRows}
+              editableColumns={allowedEditableCols}
+              onChange={handleCellChange}
+              className="h-full w-full"
+              emptyMessage="No tax records match the current filters."
+              errorCells={gridErrorCells}
+            />
+          </div>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel
+          panelRef={supplementalPanelRef}
+          defaultSize={'0%'}
+          minSize={'25%'}
+          maxSize={'50%'}
+          collapsible
         >
-          <SheetHeader className="mb-4">
-            <SheetTitle>Supplemental Info</SheetTitle>
-          </SheetHeader>
-
-          {/* EFILE mini-table */}
-          <div className="mb-6">
-            <h3 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-              EFILE Information
-            </h3>
-            <div className="rounded-md border bg-white dark:bg-zinc-950">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-9 text-xs font-semibold">
-                      Legal Entity
-                    </TableHead>
-                    <TableHead className="h-9 text-xs font-semibold">
-                      State/Jur.
-                    </TableHead>
-                    <TableHead className="h-9 text-xs font-semibold">
-                      Acct #
-                    </TableHead>
-                    <TableHead className="h-9 text-xs font-semibold">
-                      User
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {efileRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="py-4 text-center text-xs text-zinc-400"
-                      >
-                        No EFILE records
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    efileRows.map((row) => (
-                      <TableRow key={row.id} className="h-10">
-                        <TableCell className="text-xs">
-                          {row.legal_entity}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {row.state_jurisdiction}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {row.account_number}
-                        </TableCell>
-                        <TableCell className="text-xs">{row.user}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          {/* Credit Carryforwards mini-table */}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-              Credit Carryforwards
-            </h3>
-            <div className="rounded-md border bg-white dark:bg-zinc-950">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-9 text-xs font-semibold">
-                      Legal Entity
-                    </TableHead>
-                    <TableHead className="h-9 text-xs font-semibold">
-                      State
-                    </TableHead>
-                    <TableHead className="h-9 text-right text-xs font-semibold">
-                      Prior
-                    </TableHead>
-                    <TableHead className="h-9 text-right text-xs font-semibold">
-                      Ending
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {creditRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="py-4 text-center text-xs text-zinc-400"
-                      >
-                        No credit carryforward records
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    creditRows.map((row) => {
-                      const priorNum = parseFloat(row.prior_amount)
-                      const endingNum = parseFloat(row.ending_amount)
-                      const fmt = (n: number) =>
-                        new Intl.NumberFormat('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                        }).format(n)
-                      return (
-                        <TableRow key={row.id} className="h-10">
-                          <TableCell className="text-xs">
-                            {row.legal_entity}
-                          </TableCell>
-                          <TableCell className="text-xs">{row.state}</TableCell>
-                          <TableCell
-                            className={`text-right font-mono text-xs ${priorNum < 0 ? 'text-red-600 dark:text-red-400' : ''}`}
-                          >
-                            {fmt(priorNum)}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-mono text-xs ${endingNum < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}
-                          >
-                            {fmt(endingNum)}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          <TVRSupplementalPanel efileRows={efileRows} creditRows={creditRows} />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }
