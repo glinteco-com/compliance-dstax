@@ -18,6 +18,7 @@ export interface SpreadsheetColumn {
   type?: ColumnType
   readOnly?: boolean
   align?: 'left' | 'center' | 'right'
+  pinRight?: boolean
 }
 
 export interface SpreadsheetGridProps {
@@ -234,6 +235,37 @@ export function SpreadsheetGrid({
 
   const stickyColClass = stickyRowNumbers ? 'sticky left-0 z-[5]' : ''
 
+  // Pre-compute right offsets for pinned-right columns (rightmost pinned col = 0px).
+  const pinnedRightOffsets = React.useMemo(() => {
+    const offsets: Record<string, number> = {}
+    let acc = 0
+    // Walk right-to-left through columns
+    for (let i = columns.length - 1; i >= 0; i--) {
+      const col = columns[i]
+      if (!col.pinRight) continue
+      offsets[col.id] = acc
+      acc += col.width ?? (col.type === 'currency' ? 140 : 120)
+    }
+    return offsets
+  }, [columns])
+
+  // Is this column the leftmost of the pinned-right group? (needs the divider shadow)
+  const isFirstPinnedRight = React.useMemo(() => {
+    const rightmost: Record<string, boolean> = {}
+    let found = false
+    for (let i = 0; i < columns.length; i++) {
+      if (columns[i].pinRight) {
+        if (!found) {
+          rightmost[columns[i].id] = true
+          found = true
+        } else {
+          rightmost[columns[i].id] = false
+        }
+      }
+    }
+    return rightmost
+  }, [columns])
+
   return (
     <div
       className={cn(
@@ -258,46 +290,56 @@ export function SpreadsheetGrid({
                   #
                 </th>
               )}
-              {columns.map((col) => (
-                <th
-                  key={col.id}
-                  className={cn(
-                    'border-r border-b border-zinc-200 px-3 py-2 text-left text-xs font-semibold whitespace-nowrap text-zinc-600 last:border-r-0',
-                    !isEditable(col) && 'bg-zinc-100/50',
-                    (col.align === 'right' ||
-                      col.type === 'currency' ||
-                      col.type === 'number') &&
-                      'text-right',
-                    col.align === 'center' && 'text-center'
-                  )}
-                  style={{
-                    width: col.width ? `${col.width}px` : undefined,
-                    minWidth: col.width
-                      ? `${col.width}px`
-                      : col.type === 'currency'
-                        ? '140px'
-                        : '120px',
-                  }}
-                >
-                  <div
+              {columns.map((col) => {
+                const isPinRight =
+                  col.pinRight && pinnedRightOffsets[col.id] !== undefined
+                const isFirstPin = isFirstPinnedRight[col.id]
+                return (
+                  <th
+                    key={col.id}
                     className={cn(
-                      'flex items-center gap-1.5',
+                      'border-r border-b border-zinc-200 px-3 py-2 text-left text-xs font-semibold whitespace-nowrap text-zinc-600 last:border-r-0',
+                      !isEditable(col) && 'bg-zinc-100/50',
+                      isPinRight && 'sticky z-[15] bg-zinc-50',
+                      isFirstPin && 'shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.08)]',
                       (col.align === 'right' ||
                         col.type === 'currency' ||
                         col.type === 'number') &&
-                        'justify-end',
-                      col.align === 'center' && 'justify-center'
+                        'text-right',
+                      col.align === 'center' && 'text-center'
                     )}
+                    style={{
+                      width: col.width ? `${col.width}px` : undefined,
+                      minWidth: col.width
+                        ? `${col.width}px`
+                        : col.type === 'currency'
+                          ? '140px'
+                          : '120px',
+                      ...(isPinRight
+                        ? { right: `${pinnedRightOffsets[col.id]}px` }
+                        : {}),
+                    }}
                   >
-                    {col.label}
-                    {!isEditable(col) && (
-                      <span className="rounded bg-zinc-200 px-1 py-0.5 text-[10px] font-normal text-zinc-500">
-                        read-only
-                      </span>
-                    )}
-                  </div>
-                </th>
-              ))}
+                    <div
+                      className={cn(
+                        'flex items-center gap-1.5',
+                        (col.align === 'right' ||
+                          col.type === 'currency' ||
+                          col.type === 'number') &&
+                          'justify-end',
+                        col.align === 'center' && 'justify-center'
+                      )}
+                    >
+                      {col.label}
+                      {!isEditable(col) && (
+                        <span className="rounded bg-zinc-200 px-1 py-0.5 text-[10px] font-normal text-zinc-500">
+                          read-only
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
@@ -329,6 +371,9 @@ export function SpreadsheetGrid({
                   const isNumeric =
                     col.type === 'currency' || col.type === 'number'
                   const hasError = errorCells?.has(`${rowIndex}-${col.id}`)
+                  const isPinRight =
+                    col.pinRight && pinnedRightOffsets[col.id] !== undefined
+                  const isFirstPin = isFirstPinnedRight[col.id]
 
                   return (
                     <td
@@ -345,6 +390,10 @@ export function SpreadsheetGrid({
                       className={cn(
                         'relative border-r border-b border-zinc-200 p-0 outline-none last:border-r-0',
                         !editable && 'bg-zinc-50/50',
+                        isPinRight && 'bg-background sticky z-[5]',
+                        isPinRight && !editable && 'bg-zinc-50/80',
+                        isFirstPin &&
+                          'shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]',
                         !hasError &&
                           focused &&
                           'ring-2 ring-orange-500 ring-inset',
@@ -354,6 +403,11 @@ export function SpreadsheetGrid({
                           'cursor-text hover:bg-orange-50',
                         isCheckbox && 'cursor-pointer'
                       )}
+                      style={
+                        isPinRight
+                          ? { right: `${pinnedRightOffsets[col.id]}px` }
+                          : undefined
+                      }
                       onClick={() => handleCellClick(rowIndex, colIndex, col)}
                       onKeyDown={(e) =>
                         handleGridKeyDown(e, rowIndex, colIndex)
