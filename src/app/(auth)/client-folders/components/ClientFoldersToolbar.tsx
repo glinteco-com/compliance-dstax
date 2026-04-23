@@ -98,14 +98,14 @@ export function ClientFoldersToolbar({
         </div>
 
         <div className="flex items-center gap-2">
-          {isDstaxRole && (
+          {/* {isDstaxRole && (
             <div className="flex items-center gap-1.5">
               <Button variant="outline" size="sm" className="gap-1.5">
                 <ArrowUpFromLine className="h-4 w-4" />
                 Update a new version
               </Button>
             </div>
-          )}
+          )} */}
 
           <Button
             variant="outline"

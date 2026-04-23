@@ -13,9 +13,12 @@ interface FileDetailSidebarProps {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-sm text-zinc-500">{label}</span>
-      <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+    <div className="flex items-center justify-between gap-4">
+      <span className="shrink-0 text-sm text-zinc-500">{label}</span>
+      <span
+        className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-200"
+        title={value}
+      >
         {value}
       </span>
     </div>
@@ -53,7 +56,10 @@ export function FileDetailSidebar({ item, onClose }: FileDetailSidebarProps) {
                 ) : (
                   <div className="scale-150">{getFileIcon(item.type)}</div>
                 )}
-                <span className="max-w-[200px] truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <span
+                  className="max-w-[200px] truncate text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                  title={item.name}
+                >
                   {item.name}
                 </span>
               </div>

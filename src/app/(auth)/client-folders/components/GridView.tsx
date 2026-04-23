@@ -74,7 +74,10 @@ export function GridView({
                     />
                   </div>
                   <Folder className="h-12 w-12 fill-orange-300 text-orange-500" />
-                  <span className="w-full truncate text-center text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  <span
+                    className="w-full truncate text-center text-xs font-medium text-zinc-700 dark:text-zinc-300"
+                    title={folder.name}
+                  >
                     {folder.name}
                   </span>
                   <span className="text-xs text-zinc-400">
@@ -132,9 +135,12 @@ export function GridView({
                       onDetails={onDetails}
                     />
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
-                    {getFileIcon(file.type)}
-                    <span className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  <div className="mt-4 flex w-full items-center gap-2 overflow-hidden">
+                    <div className="shrink-0">{getFileIcon(file.type)}</div>
+                    <span
+                      className="truncate text-xs font-medium text-zinc-700 dark:text-zinc-300"
+                      title={file.name}
+                    >
                       {file.name}
                     </span>
                   </div>

@@ -81,16 +81,17 @@ export function ListViewTable({
                     className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-orange-500"
                   />
                 </td>
-                <td className="px-4">
-                  <div className="flex items-center gap-2">
-                    {getFileIcon(item.type)}
+                <td className="max-w-md px-4">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <div className="shrink-0">{getFileIcon(item.type)}</div>
                     <button
-                      className="text-sm font-medium text-zinc-800 hover:underline dark:text-zinc-200"
+                      className="truncate text-sm font-medium text-zinc-800 hover:underline dark:text-zinc-200"
                       onClick={() =>
                         item.type === 'folder'
                           ? onOpenFolder(item)
                           : onDetails(item)
                       }
+                      title={item.name}
                     >
                       {item.name}
                     </button>
