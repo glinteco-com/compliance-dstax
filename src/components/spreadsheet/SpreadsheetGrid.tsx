@@ -300,7 +300,7 @@ export function SpreadsheetGrid({
                     className={cn(
                       'border-r border-b border-zinc-200 px-3 py-2 text-left text-xs font-semibold whitespace-nowrap text-zinc-600 last:border-r-0',
                       !isEditable(col) && 'bg-zinc-100/50',
-                      isPinRight && 'sticky z-[15] bg-zinc-50',
+                      isPinRight && 'sticky z-15 bg-zinc-50',
                       isFirstPin && 'shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.08)]',
                       (col.align === 'right' ||
                         col.type === 'currency' ||
@@ -390,7 +390,7 @@ export function SpreadsheetGrid({
                       className={cn(
                         'relative border-r border-b border-zinc-200 p-0 outline-none last:border-r-0',
                         !editable && 'bg-zinc-50/50',
-                        isPinRight && 'bg-background sticky z-[5]',
+                        isPinRight && 'bg-background sticky z-5',
                         isPinRight && !editable && 'bg-zinc-50/80',
                         isFirstPin &&
                           'shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)]',
