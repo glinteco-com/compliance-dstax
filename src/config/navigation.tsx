@@ -118,11 +118,11 @@ export const navigationItems: NavigationItem[] = [
       },
     ],
   },
-  // {
-  //   title: 'Client Folders',
-  //   url: '/client-folders',
-  //   icon: <FolderOpen className="h-4 w-4" />,
-  // },
+  {
+    title: 'Client Folders',
+    url: '/client-folders',
+    icon: <FolderOpen className="h-4 w-4" />,
+  },
   {
     title: 'Support Tickets',
     url: '/support-tickets',
