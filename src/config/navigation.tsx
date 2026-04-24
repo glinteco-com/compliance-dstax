@@ -18,6 +18,7 @@ import {
   PenLine,
   FileText,
   Send,
+  Archive,
 } from 'lucide-react'
 
 /**
@@ -115,6 +116,11 @@ export const navigationItems: NavigationItem[] = [
         title: 'Credit Carryforwards',
         url: '/tvrs/credit-carryforwards',
         icon: <TrendingUp className="h-4 w-4" />,
+      },
+      {
+        title: 'Archived',
+        url: '/tvrs/archived',
+        icon: <Archive className="h-4 w-4" />,
       },
     ],
   },

@@ -25,6 +25,8 @@ interface TvrPeriodListParams {
   workflowStatus?: ApiTaxComplianceTvrPeriodListWorkflowStatus
   workflowStatusIn?: string[]
   ordering?: string
+  createdAtGte?: string
+  createdAtLte?: string
 }
 
 export const useTvrPeriods = (params: TvrPeriodListParams) => {
@@ -38,6 +40,8 @@ export const useTvrPeriods = (params: TvrPeriodListParams) => {
     workflow_status: params.workflowStatus,
     workflow_status__in: params.workflowStatusIn,
     ordering: params.ordering,
+    created_at__gte: params.createdAtGte,
+    created_at__lte: params.createdAtLte,
   }
   const { data, ...rest } = useApiTaxComplianceTvrPeriodList(apiParams)
 
